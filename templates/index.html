@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Monitor de Camas{% endblock %}
+{% block page_title %}Monitor de Camas{% endblock %}
+
+{% block header_actions %}
+<div class="stats-summary" id="stats-summary">
+    <!-- Se carga dinamicamente -->
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="monitor-container">
+    <!-- Panel de estadisticas -->
+    <div class="stats-panel">
+        <h3>Estado del Sistema</h3>
+        <div class="stats-chart" id="stats-chart">
+            <!-- Grafico circular -->
+        </div>
+        <div class="stats-legend" id="stats-legend">
+            <!-- Leyenda de estados -->
+        </div>
+    </div>
+
+    <!-- Panel principal de camas -->
+    <div class="beds-panel">
+        <div class="location-tabs">
+            {% for torre in torres %}
+            <button class="tab-btn {% if loop.first %}active{% endif %}" data-torre-id="{{ torre.id }}">
+                {{ torre.nombre }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <div class="locations-grid" id="locations-grid">
+            {% for torre in torres %}
+            <div class="torre-content {% if loop.first %}active{% endif %}" data-torre-id="{{ torre.id }}">
+                {% for piso in torre.hijos if piso.activo %}
+                <div class="piso-section">
+                    <h3 class="piso-title">{{ piso.nombre }}</h3>
+                    <div class="sectores-grid">
+                        {% for sector in piso.hijos if sector.activo %}
+                        <div class="sector-card" data-sector-id="{{ sector.id }}" data-camas-por-fila="{{ sector.camas_por_fila }}">
+                            <div class="sector-header">
+                                <h4>{{ sector.nombre }}</h4>
+                                <span class="camas-count">{{ sector.camas|selectattr('activo')|list|length }} camas</span>
+                            </div>
+                            <div class="honeycomb-grid" data-camas-por-fila="{{ sector.camas_por_fila }}">
+                                {% for cama in sector.camas if cama.activo %}
+                                <div class="hex-cell"
+                                     data-cama-id="{{ cama.id }}"
+                                     data-estado-id="{{ cama.estado_id }}"
+                                     style="--cell-color: {{ cama.estado.color }};"
+                                     title="{{ cama.codigo }} - {{ cama.estado.nombre }}">
+                                    <div class="hex-content">
+                                        <span class="cama-codigo">{{ cama.codigo }}</span>
+                                        <span class="cama-estado">{{ cama.estado.nombre }}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para cambiar estado -->
+<div class="modal" id="estado-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Cambiar Estado de Cama</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="cama-info">
+                <span class="cama-codigo-modal" id="modal-cama-codigo"></span>
+                <span class="cama-ubicacion-modal" id="modal-cama-ubicacion"></span>
+            </div>
+            <div class="estados-grid">
+                {% for estado in estados %}
+                <button class="estado-btn"
+                        data-estado-id="{{ estado.id }}"
+                        style="--estado-color: {{ estado.color }};">
+                    <span class="estado-color" style="background-color: {{ estado.color }};"></span>
+                    <span class="estado-nombre">{{ estado.nombre }}</span>
+                </button>
+                {% endfor %}
+            </div>
+            <div class="comentario-section">
+                <label for="comentario">Comentario (opcional)</label>
+                <textarea id="comentario" placeholder="Agregar comentario..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary modal-cancel">Cancelar</button>
+            <button class="btn btn-primary" id="btn-guardar-estado">Guardar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Inicializar monitor de camas
+    document.addEventListener('DOMContentLoaded', function() {
+        initMonitor();
+        loadStats();
+    });
+</script>
+{% endblock %}
