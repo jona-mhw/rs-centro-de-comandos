@@ -433,10 +433,9 @@ body {
 /* HONEYCOMB / PANAL DE ABEJAS */
 .honeycomb-grid {
     --hex-size: 70px;
-    --hex-margin: 3px;
+    --hex-margin: 2px;
     --hex-height: calc(var(--hex-size) * 1.1547);
     --row-offset: calc(var(--hex-size) / 2 + var(--hex-margin));
-    --row-vertical-offset: calc(var(--hex-height) * -0.25 - var(--hex-margin));
 
     display: flex;
     flex-direction: column;
@@ -447,7 +446,7 @@ body {
 
 .hex-row {
     display: flex;
-    margin-top: var(--row-vertical-offset);
+    margin-top: calc(var(--hex-height) * -0.22);
 }
 
 .hex-row:first-child {
