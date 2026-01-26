@@ -432,21 +432,42 @@ body {
 
 /* HONEYCOMB / PANAL DE ABEJAS */
 .honeycomb-grid {
+    --hex-size: 70px;
+    --hex-margin: 3px;
+    --hex-height: calc(var(--hex-size) * 1.1547);
+    --row-offset: calc(var(--hex-size) / 2 + var(--hex-margin));
+    --row-vertical-offset: calc(var(--hex-height) * -0.25 - var(--hex-margin));
+
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 10px 0;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px;
+    padding-bottom: 20px;
+}
+
+.hex-row {
+    display: flex;
+    margin-top: var(--row-vertical-offset);
+}
+
+.hex-row:first-child {
+    margin-top: 0;
+}
+
+/* Filas pares (0-indexed: 1, 3, 5...) tienen offset */
+.hex-row:nth-child(even) {
+    margin-left: var(--row-offset);
 }
 
 .hex-cell {
-    --hex-size: 70px;
     --cell-color: #4CAF50;
     width: var(--hex-size);
-    height: calc(var(--hex-size) * 1.1547);
-    margin: 2px;
+    height: var(--hex-height);
+    margin: 0 var(--hex-margin);
     position: relative;
     cursor: pointer;
     transition: transform 0.2s, filter 0.2s;
+    flex-shrink: 0;
 }
 
 .hex-cell::before {
@@ -499,20 +520,6 @@ body {
     color: rgba(255,255,255,0.9);
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     margin-top: 2px;
-}
-
-/* Offset para efecto panal real */
-.honeycomb-grid[data-camas-por-fila="3"] .hex-cell:nth-child(6n+4),
-.honeycomb-grid[data-camas-por-fila="3"] .hex-cell:nth-child(6n+5),
-.honeycomb-grid[data-camas-por-fila="3"] .hex-cell:nth-child(6n+6) {
-    margin-left: calc(var(--hex-size) / 2 + 2px);
-}
-
-.honeycomb-grid[data-camas-por-fila="4"] .hex-cell:nth-child(8n+5),
-.honeycomb-grid[data-camas-por-fila="4"] .hex-cell:nth-child(8n+6),
-.honeycomb-grid[data-camas-por-fila="4"] .hex-cell:nth-child(8n+7),
-.honeycomb-grid[data-camas-por-fila="4"] .hex-cell:nth-child(8n+8) {
-    margin-left: calc(var(--hex-size) / 2 + 2px);
 }
 
 /* Modal */

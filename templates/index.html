@@ -45,17 +45,22 @@
                                 <h4>{{ sector.nombre }}</h4>
                                 <span class="camas-count">{{ sector.camas|selectattr('activo')|list|length }} camas</span>
                             </div>
+                            {% set camas_activas = sector.camas|selectattr('activo')|list %}
                             <div class="honeycomb-grid" data-camas-por-fila="{{ sector.camas_por_fila }}">
-                                {% for cama in sector.camas if cama.activo %}
-                                <div class="hex-cell"
-                                     data-cama-id="{{ cama.id }}"
-                                     data-estado-id="{{ cama.estado_id }}"
-                                     style="--cell-color: {{ cama.estado.color }};"
-                                     title="{{ cama.codigo }} - {{ cama.estado.nombre }}">
-                                    <div class="hex-content">
-                                        <span class="cama-codigo">{{ cama.codigo }}</span>
-                                        <span class="cama-estado">{{ cama.estado.nombre }}</span>
+                                {% for row in camas_activas|batch(sector.camas_por_fila) %}
+                                <div class="hex-row">
+                                    {% for cama in row %}
+                                    <div class="hex-cell"
+                                         data-cama-id="{{ cama.id }}"
+                                         data-estado-id="{{ cama.estado_id }}"
+                                         style="--cell-color: {{ cama.estado.color }};"
+                                         title="{{ cama.codigo }} - {{ cama.estado.nombre }}">
+                                        <div class="hex-content">
+                                            <span class="cama-codigo">{{ cama.codigo }}</span>
+                                            <span class="cama-estado">{{ cama.estado.nombre }}</span>
+                                        </div>
                                     </div>
+                                    {% endfor %}
                                 </div>
                                 {% endfor %}
                             </div>
