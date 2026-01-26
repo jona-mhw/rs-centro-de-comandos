@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Centro de Comandos{% endblock %} - RedSalud</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">RS</span>
+                <span class="logo-text">RedSalud</span>
+            </div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                <a href="{{ url_for('index') }}" class="nav-link">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>Monitor de Camas</span>
+                </a>
+            </li>
+            <li class="nav-item {% if request.endpoint == 'ubicaciones' %}active{% endif %}">
+                <a href="{{ url_for('ubicaciones') }}" class="nav-link">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span>Ubicaciones</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">U</div>
+                <div class="user-details">
+                    <span class="user-name">Usuario Demo</span>
+                    <span class="user-role">Administrador</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header class="top-header">
+            <h1 class="page-title">{% block page_title %}Centro de Comandos{% endblock %}</h1>
+            <div class="header-actions">
+                {% block header_actions %}{% endblock %}
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

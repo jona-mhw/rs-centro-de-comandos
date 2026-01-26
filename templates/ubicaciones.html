@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Mantenedor de Ubicaciones{% endblock %}
+{% block page_title %}Mantenedor de Ubicaciones{% endblock %}
+
+{% block header_actions %}
+<button class="btn btn-primary" id="btn-nueva-torre">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+    Nueva Torre
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="ubicaciones-container">
+    <div class="ubicaciones-tree">
+        {% for torre in torres %}
+        <div class="tree-item torre-item" data-id="{{ torre.id }}">
+            <div class="tree-header">
+                <div class="tree-info">
+                    <span class="tree-icon torre-icon">T</span>
+                    <span class="tree-name">{{ torre.nombre }}</span>
+                    <span class="tree-badge">{{ torre.hijos|selectattr('activo')|list|length }} pisos</span>
+                </div>
+                <div class="tree-actions">
+                    <button class="btn-icon btn-edit" title="Editar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="btn-icon btn-add-piso" title="Agregar Piso">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="tree-children">
+                {% for piso in torre.hijos if piso.activo %}
+                <div class="tree-item piso-item" data-id="{{ piso.id }}">
+                    <div class="tree-header">
+                        <div class="tree-info">
+                            <span class="tree-icon piso-icon">P</span>
+                            <span class="tree-name">{{ piso.nombre }}</span>
+                            <span class="tree-badge">{{ piso.hijos|selectattr('activo')|list|length }} sectores</span>
+                        </div>
+                        <div class="tree-actions">
+                            <button class="btn-icon btn-edit" title="Editar">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </button>
+                            <button class="btn-icon btn-add-sector" title="Agregar Sector">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="tree-children">
+                        {% for sector in piso.hijos if sector.activo %}
+                        <div class="tree-item sector-item" data-id="{{ sector.id }}">
+                            <div class="tree-header">
+                                <div class="tree-info">
+                                    <span class="tree-icon sector-icon">S</span>
+                                    <span class="tree-name">{{ sector.nombre }}</span>
+                                    <span class="tree-badge">{{ sector.camas|selectattr('activo')|list|length }} camas</span>
+                                    <span class="tree-config">{{ sector.camas_por_fila }} por fila</span>
+                                </div>
+                                <div class="tree-actions">
+                                    <button class="btn-icon btn-edit" title="Editar">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                    <button class="btn-icon btn-add-cama" title="Agregar Cama">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                    </button>
+                                    <button class="btn-icon btn-delete" title="Eliminar">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="sector-camas">
+                                {% for cama in sector.camas if cama.activo %}
+                                <span class="cama-tag" data-cama-id="{{ cama.id }}" style="--tag-color: {{ cama.estado.color }};">
+                                    {{ cama.codigo }}
+                                    <button class="tag-delete" title="Eliminar cama">&times;</button>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal para crear/editar ubicacion -->
+<div class="modal" id="ubicacion-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="ubicacion-modal-title">Nueva Ubicacion</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="ubicacion-id">
+            <input type="hidden" id="ubicacion-tipo">
+            <input type="hidden" id="ubicacion-padre-id">
+
+            <div class="form-group">
+                <label for="ubicacion-nombre">Nombre</label>
+                <input type="text" id="ubicacion-nombre" placeholder="Nombre de la ubicacion">
+            </div>
+
+            <div class="form-group" id="camas-por-fila-group">
+                <label for="ubicacion-camas-por-fila">Camas por fila (para vista hexagonal)</label>
+                <input type="number" id="ubicacion-camas-por-fila" min="2" max="10" value="3">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary modal-cancel">Cancelar</button>
+            <button class="btn btn-primary" id="btn-guardar-ubicacion">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear cama -->
+<div class="modal" id="cama-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Nueva Cama</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="cama-ubicacion-id">
+
+            <div class="form-group">
+                <label for="cama-codigo">Codigo</label>
+                <input type="text" id="cama-codigo" placeholder="Ej: UCI-01">
+            </div>
+
+            <div class="form-group">
+                <label for="cama-nombre">Nombre (opcional)</label>
+                <input type="text" id="cama-nombre" placeholder="Ej: Cama 1">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary modal-cancel">Cancelar</button>
+            <button class="btn btn-primary" id="btn-guardar-cama">Guardar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initUbicaciones();
+    });
+</script>
+{% endblock %}
