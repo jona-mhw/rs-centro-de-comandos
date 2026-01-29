@@ -131,12 +131,13 @@ class Cama(db.Model):
         return timedelta(0)
 
     def tiempo_en_estado_str(self):
-        """Retorna el tiempo en formato HH:MM"""
+        """Retorna el tiempo en formato HH:MM:SS"""
         delta = self.tiempo_en_estado()
-        total_minutes = int(delta.total_seconds() // 60)
-        hours = total_minutes // 60
-        minutes = total_minutes % 60
-        return f"{hours}:{minutes:02d}"
+        total_seconds = int(delta.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
 
     def tiempo_en_estado_minutos(self):
         """Retorna el tiempo en minutos"""

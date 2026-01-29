@@ -220,30 +220,76 @@ def cambiar_estado_cama(cama_id):
     paciente_nombre = data.get('paciente_nombre', '').strip()
     paciente_rut = data.get('paciente_rut', '').strip()
     paciente_id = data.get('paciente_id')
+    confirmar_traslado = data.get('confirmar_traslado', False)
 
     if not nuevo_estado_id:
         return jsonify({'error': 'estado_id es requerido'}), 400
 
     nuevo_estado = EstadoCama.query.get_or_404(nuevo_estado_id)
 
+    cama_anterior = None  # Para registrar si hubo traslado
+
     # Manejar paciente si el nuevo estado es "Ocupada"
     if nuevo_estado.nombre == 'Ocupada':
-        if paciente_id:
-            # Usar paciente existente
-            cama.paciente_id = paciente_id
-        elif paciente_nombre or paciente_rut:
-            # Crear o buscar paciente
-            if paciente_rut:
-                paciente = Paciente.query.filter_by(rut=paciente_rut).first()
-            else:
-                paciente = None
+        paciente = None
 
+        if paciente_id:
+            # Usar paciente existente por ID
+            paciente = Paciente.query.get(paciente_id)
+        elif paciente_rut:
+            # Buscar por RUT primero
+            paciente = Paciente.query.filter_by(rut=paciente_rut).first()
             if not paciente:
                 paciente = Paciente(nombre=paciente_nombre, rut=paciente_rut)
                 db.session.add(paciente)
                 db.session.flush()
+        elif paciente_nombre:
+            # Crear nuevo paciente solo con nombre
+            paciente = Paciente(nombre=paciente_nombre, rut='')
+            db.session.add(paciente)
+            db.session.flush()
+
+        if paciente:
+            # Verificar si el paciente ya está en otra cama
+            cama_actual_paciente = Cama.query.filter(
+                Cama.paciente_id == paciente.id,
+                Cama.id != cama_id,
+                Cama.activo == True
+            ).first()
+
+            if cama_actual_paciente and not confirmar_traslado:
+                # Advertir al usuario sobre el traslado
+                return jsonify({
+                    'warning': True,
+                    'message': f'El paciente {paciente.nombre or paciente.rut} ya está asignado a la cama {cama_actual_paciente.codigo}. ¿Desea trasladarlo?',
+                    'paciente': paciente.to_dict(),
+                    'cama_anterior': cama_actual_paciente.to_dict()
+                })
+
+            # Si hay cama anterior y se confirma el traslado, liberarla
+            if cama_actual_paciente and confirmar_traslado:
+                cama_anterior = cama_actual_paciente
+                # Poner la cama anterior en estado "Esperando Limpieza"
+                estado_limpieza = EstadoCama.query.filter_by(nombre='Esperando Limpieza').first()
+                if estado_limpieza:
+                    # Guardar historial de la cama anterior
+                    historial_anterior = HistorialCama(
+                        cama_id=cama_anterior.id,
+                        estado_anterior_id=cama_anterior.estado_id,
+                        estado_nuevo_id=estado_limpieza.id,
+                        perfil_id=perfil_id,
+                        paciente_id=paciente.id,
+                        comentario=f'Paciente trasladado a cama {cama.codigo}',
+                        usuario='Demo User'
+                    )
+                    db.session.add(historial_anterior)
+                    cama_anterior.estado_id = estado_limpieza.id
+                    cama_anterior.estado_inicio = datetime.utcnow()
+
+                cama_anterior.paciente_id = None
 
             cama.paciente_id = paciente.id
+
     elif nuevo_estado.nombre == 'Disponible':
         # Limpiar paciente cuando la cama queda disponible
         cama.paciente_id = None
@@ -265,10 +311,16 @@ def cambiar_estado_cama(cama_id):
     cama.estado_inicio = datetime.utcnow()
     db.session.commit()
 
-    return jsonify({
+    response_data = {
         'success': True,
         'cama': cama.to_dict()
-    })
+    }
+
+    if cama_anterior:
+        response_data['traslado'] = True
+        response_data['cama_anterior'] = cama_anterior.to_dict()
+
+    return jsonify(response_data)
 
 
 @app.route('/ubicaciones')
@@ -425,12 +477,13 @@ def tiempos_por_estado():
             for cama in camas:
                 camas_data.append({
                     'codigo': cama.codigo,
-                    'tiempo_hm': cama.tiempo_en_estado_str(),
-                    'tiempo_minutos': cama.tiempo_en_estado_minutos(),
+                    'tiempo_hms': cama.tiempo_en_estado_str(),
+                    'tiempo_segundos': int(cama.tiempo_en_estado().total_seconds()),
+                    'estado_inicio': cama.estado_inicio.isoformat() if cama.estado_inicio else None,
                     'paciente': cama.paciente.to_dict() if cama.paciente else None
                 })
             # Ordenar por tiempo descendente
-            camas_data.sort(key=lambda x: x['tiempo_minutos'], reverse=True)
+            camas_data.sort(key=lambda x: x['tiempo_segundos'], reverse=True)
             resultado[estado_nombre] = {
                 'color': estado.color,
                 'camas': camas_data
