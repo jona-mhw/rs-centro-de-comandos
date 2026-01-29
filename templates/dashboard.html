@@ -9,6 +9,7 @@
     <div class="dashboard-section">
         <div class="section-header">
             <h3>Registros Historicos por Semana y Perfil</h3>
+            <span class="demo-badge">Datos simulados</span>
         </div>
         <div class="chart-container">
             <canvas id="chart-registros-semana"></canvas>
@@ -27,6 +28,7 @@
     <div class="dashboard-section tiempos-section">
         <div class="section-header">
             <h3>Tiempos por Estado</h3>
+            <span class="demo-badge">Tiempos iniciales simulados</span>
         </div>
         <div class="tiempos-grid" id="tiempos-grid">
             <!-- Se carga dinamicamente -->
@@ -36,12 +38,17 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+let tiemposData = null; // Almacena los datos para actualización local
+
 document.addEventListener('DOMContentLoaded', function() {
     cargarGraficoRegistros();
     cargarTiemposPorEstado();
 
-    // Actualizar tiempos cada minuto
-    setInterval(cargarTiemposPorEstado, 60000);
+    // Actualizar tiempos visualmente cada segundo (calculo local)
+    setInterval(actualizarTiemposLocal, 1000);
+
+    // Refrescar datos del servidor cada 30 segundos
+    setInterval(cargarTiemposPorEstado, 30000);
 });
 
 function cargarGraficoRegistros() {
@@ -97,45 +104,80 @@ function cargarGraficoRegistros() {
         });
 }
 
+function formatTiempo(segundos) {
+    const hours = Math.floor(segundos / 3600);
+    const minutes = Math.floor((segundos % 3600) / 60);
+    const secs = segundos % 60;
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
 function cargarTiemposPorEstado() {
     fetch('/api/dashboard/tiempos-por-estado')
         .then(response => response.json())
         .then(data => {
-            const container = document.getElementById('tiempos-grid');
-            container.innerHTML = '';
-
-            const estadosOrden = ['Esperando Transporte', 'Esperando Limpieza', 'En Limpieza'];
-
-            estadosOrden.forEach(estadoNombre => {
-                if (data[estadoNombre]) {
-                    const estadoData = data[estadoNombre];
-                    const card = document.createElement('div');
-                    card.className = 'tiempo-card';
-                    card.innerHTML = `
-                        <div class="tiempo-card-header" style="border-left-color: ${estadoData.color}">
-                            <h4>${estadoNombre} (H:M)</h4>
-                            <span class="tiempo-count">${estadoData.camas.length} camas</span>
-                        </div>
-                        <div class="tiempo-card-body">
-                            ${estadoData.camas.length > 0 ?
-                                `<table class="tiempo-table">
-                                    <tbody>
-                                        ${estadoData.camas.map(cama => `
-                                            <tr>
-                                                <td class="cama-codigo">${cama.codigo}</td>
-                                                <td class="cama-tiempo">${cama.tiempo_hm}</td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>` :
-                                '<p class="no-camas">Sin camas en este estado</p>'
-                            }
-                        </div>
-                    `;
-                    container.appendChild(card);
-                }
-            });
+            tiemposData = data; // Guardar para actualización local
+            renderTiempos(data);
         });
+}
+
+function actualizarTiemposLocal() {
+    if (!tiemposData) return;
+
+    // Incrementar segundos localmente para cada cama
+    Object.keys(tiemposData).forEach(estadoNombre => {
+        tiemposData[estadoNombre].camas.forEach(cama => {
+            cama.tiempo_segundos += 1;
+        });
+    });
+
+    // Actualizar solo los tiempos en la UI sin re-renderizar todo
+    const tiempoCells = document.querySelectorAll('.cama-tiempo');
+    let index = 0;
+    Object.keys(tiemposData).forEach(estadoNombre => {
+        tiemposData[estadoNombre].camas.forEach(cama => {
+            if (tiempoCells[index]) {
+                tiempoCells[index].textContent = formatTiempo(cama.tiempo_segundos);
+            }
+            index++;
+        });
+    });
+}
+
+function renderTiempos(data) {
+    const container = document.getElementById('tiempos-grid');
+    container.innerHTML = '';
+
+    const estadosOrden = ['Esperando Transporte', 'Esperando Limpieza', 'En Limpieza'];
+
+    estadosOrden.forEach(estadoNombre => {
+        if (data[estadoNombre]) {
+            const estadoData = data[estadoNombre];
+            const card = document.createElement('div');
+            card.className = 'tiempo-card';
+            card.innerHTML = `
+                <div class="tiempo-card-header" style="border-left-color: ${estadoData.color}">
+                    <h4>${estadoNombre} (H:M:S)</h4>
+                    <span class="tiempo-count">${estadoData.camas.length} camas</span>
+                </div>
+                <div class="tiempo-card-body">
+                    ${estadoData.camas.length > 0 ?
+                        `<table class="tiempo-table">
+                            <tbody>
+                                ${estadoData.camas.map(cama => `
+                                    <tr>
+                                        <td class="cama-codigo">${cama.codigo}</td>
+                                        <td class="cama-tiempo">${formatTiempo(cama.tiempo_segundos)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>` :
+                        '<p class="no-camas">Sin camas en este estado</p>'
+                    }
+                </div>
+            `;
+            container.appendChild(card);
+        }
+    });
 }
 </script>
 {% endblock %}

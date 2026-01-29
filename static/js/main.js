@@ -213,7 +213,7 @@ function initModalHandlers() {
     document.getElementById('btn-guardar-estado')?.addEventListener('click', guardarEstado);
 }
 
-async function guardarEstado() {
+async function guardarEstado(confirmarTraslado = false) {
     if (!selectedCamaId || !selectedEstadoId) {
         alert('Por favor seleccione un estado');
         return;
@@ -259,19 +259,41 @@ async function guardarEstado() {
                 comentario: comentario,
                 paciente_nombre: pacienteNombre,
                 paciente_rut: pacienteRut,
-                paciente_id: pacienteId ? parseInt(pacienteId) : null
+                paciente_id: pacienteId ? parseInt(pacienteId) : null,
+                confirmar_traslado: confirmarTraslado
             })
         });
 
         const data = await response.json();
 
+        // Si hay advertencia de traslado, preguntar al usuario
+        if (data.warning) {
+            const confirmar = confirm(data.message + '\n\nLa cama anterior pasará a estado "Esperando Limpieza".');
+            if (confirmar) {
+                // Reintentar con confirmación
+                guardarEstado(true);
+            }
+            return;
+        }
+
         if (data.success) {
-            // Actualizar celda
+            // Actualizar celda de la cama principal
             const cell = document.querySelector(`.hex-cell[data-cama-id="${selectedCamaId}"]`);
             cell.style.setProperty('--cell-color', data.cama.estado.color);
             cell.dataset.estadoId = data.cama.estado.id;
             cell.querySelector('.cama-estado').textContent = data.cama.estado.nombre;
             cell.title = `${data.cama.codigo} - ${data.cama.estado.nombre}`;
+
+            // Si hubo traslado, actualizar también la cama anterior
+            if (data.traslado && data.cama_anterior) {
+                const cellAnterior = document.querySelector(`.hex-cell[data-cama-id="${data.cama_anterior.id}"]`);
+                if (cellAnterior) {
+                    cellAnterior.style.setProperty('--cell-color', data.cama_anterior.estado.color);
+                    cellAnterior.dataset.estadoId = data.cama_anterior.estado.id;
+                    cellAnterior.querySelector('.cama-estado').textContent = data.cama_anterior.estado.nombre;
+                    cellAnterior.title = `${data.cama_anterior.codigo} - ${data.cama_anterior.estado.nombre}`;
+                }
+            }
 
             // Cerrar modal
             document.getElementById('estado-modal').classList.remove('active');
@@ -307,7 +329,24 @@ function renderStatsChart(data) {
     if (!chartContainer) return;
 
     const total = data.total;
-    const estados = Object.entries(data.por_estado);
+
+    // Ordenar estados por color para agrupar visualmente colores similares
+    // Orden: Verdes -> Rojos -> Naranjas/Amarillos -> Morados -> Grises
+    const ordenColores = {
+        '#4CAF50': 1,  // Disponible - Verde
+        '#F44336': 2,  // Ocupada - Rojo
+        '#FF9800': 3,  // En Limpieza - Naranja
+        '#FFC107': 4,  // Esperando Limpieza - Amarillo
+        '#9C27B0': 5,  // Esperando Transporte - Morado
+        '#9E9E9E': 6,  // Mantenimiento - Gris
+        '#607D8B': 7,  // Bloqueada - Gris azulado
+    };
+
+    const estados = Object.entries(data.por_estado).sort((a, b) => {
+        const ordenA = ordenColores[a[1].color] || 99;
+        const ordenB = ordenColores[b[1].color] || 99;
+        return ordenA - ordenB;
+    });
 
     let cumulativePercent = 0;
     let segments = '';
@@ -346,7 +385,17 @@ function renderStatsLegend(data) {
     const legendContainer = document.getElementById('stats-legend');
     if (!legendContainer) return;
 
-    const estados = Object.entries(data.por_estado);
+    // Mismo orden que el grafico
+    const ordenColores = {
+        '#4CAF50': 1, '#F44336': 2, '#FF9800': 3, '#FFC107': 4,
+        '#9C27B0': 5, '#9E9E9E': 6, '#607D8B': 7
+    };
+
+    const estados = Object.entries(data.por_estado).sort((a, b) => {
+        const ordenA = ordenColores[a[1].color] || 99;
+        const ordenB = ordenColores[b[1].color] || 99;
+        return ordenA - ordenB;
+    });
 
     legendContainer.innerHTML = estados.map(([nombre, info]) => `
         <div class="legend-item">
