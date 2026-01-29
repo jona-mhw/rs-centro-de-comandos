@@ -135,10 +135,10 @@ def init_datos_dummy():
                 num_camas = random.randint(4, 9)
                 for i in range(1, num_camas + 1):
                     estado_cama = random.choice(estados_demo)
-                    # Tiempo aleatorio en el estado actual (entre 1 y 50 minutos, con segundos variados)
-                    minutos_random = random.randint(1, 50)
-                    segundos_random = random.randint(0, 59)
-                    tiempo_random = timedelta(minutes=minutos_random, seconds=segundos_random)
+                    # Tiempo aleatorio: 15-58 minutos con segundos únicos usando random()
+                    # Usamos random.random() para obtener fracciones de segundo únicas
+                    total_segundos = random.randint(15 * 60, 58 * 60) + random.random() * 59
+                    tiempo_random = timedelta(seconds=total_segundos)
                     estado_inicio = datetime.utcnow() - tiempo_random
 
                     # Asignar paciente solo si la cama está ocupada o en transporte
