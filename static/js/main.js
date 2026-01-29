@@ -330,22 +330,9 @@ function renderStatsChart(data) {
 
     const total = data.total;
 
-    // Ordenar estados por color para agrupar visualmente colores similares
-    // Orden: Verdes -> Rojos -> Naranjas/Amarillos -> Morados -> Grises
-    const ordenColores = {
-        '#4CAF50': 1,  // Disponible - Verde
-        '#F44336': 2,  // Ocupada - Rojo
-        '#FF9800': 3,  // En Limpieza - Naranja
-        '#FFC107': 4,  // Esperando Limpieza - Amarillo
-        '#9C27B0': 5,  // Esperando Transporte - Morado
-        '#9E9E9E': 6,  // Mantenimiento - Gris
-        '#607D8B': 7,  // Bloqueada - Gris azulado
-    };
-
+    // Ordenar estados por el campo 'orden' de la base de datos
     const estados = Object.entries(data.por_estado).sort((a, b) => {
-        const ordenA = ordenColores[a[1].color] || 99;
-        const ordenB = ordenColores[b[1].color] || 99;
-        return ordenA - ordenB;
+        return (a[1].orden || 99) - (b[1].orden || 99);
     });
 
     let cumulativePercent = 0;
@@ -385,16 +372,9 @@ function renderStatsLegend(data) {
     const legendContainer = document.getElementById('stats-legend');
     if (!legendContainer) return;
 
-    // Mismo orden que el grafico
-    const ordenColores = {
-        '#4CAF50': 1, '#F44336': 2, '#FF9800': 3, '#FFC107': 4,
-        '#9C27B0': 5, '#9E9E9E': 6, '#607D8B': 7
-    };
-
+    // Ordenar por el campo 'orden' de la base de datos
     const estados = Object.entries(data.por_estado).sort((a, b) => {
-        const ordenA = ordenColores[a[1].color] || 99;
-        const ordenB = ordenColores[b[1].color] || 99;
-        return ordenA - ordenB;
+        return (a[1].orden || 99) - (b[1].orden || 99);
     });
 
     legendContainer.innerHTML = estados.map(([nombre, info]) => `
