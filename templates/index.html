@@ -87,17 +87,65 @@
             <div class="cama-info">
                 <span class="cama-codigo-modal" id="modal-cama-codigo"></span>
                 <span class="cama-ubicacion-modal" id="modal-cama-ubicacion"></span>
+                <span class="cama-paciente-modal" id="modal-cama-paciente"></span>
             </div>
+
+            <!-- Selector de perfil -->
+            <div class="perfil-section">
+                <label>Quien registra el cambio:</label>
+                <div class="perfiles-grid">
+                    {% for perfil in perfiles %}
+                    <button class="perfil-btn"
+                            data-perfil-id="{{ perfil.id }}"
+                            style="--perfil-color: {{ perfil.color }};">
+                        <span class="perfil-color" style="background-color: {{ perfil.color }};"></span>
+                        <span>{{ perfil.nombre }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="estados-grid">
                 {% for estado in estados %}
                 <button class="estado-btn"
                         data-estado-id="{{ estado.id }}"
+                        data-estado-nombre="{{ estado.nombre }}"
                         style="--estado-color: {{ estado.color }};">
                     <span class="estado-color" style="background-color: {{ estado.color }};"></span>
                     <span class="estado-nombre">{{ estado.nombre }}</span>
                 </button>
                 {% endfor %}
             </div>
+
+            <!-- Seccion de paciente (solo visible para estado "Ocupada") -->
+            <div class="paciente-section" id="paciente-section" style="display: none;">
+                <div class="paciente-section-header">
+                    <h4>Datos del Paciente</h4>
+                    <div class="paciente-toggle">
+                        <button class="paciente-toggle-btn active" data-mode="nuevo">Nuevo</button>
+                        <button class="paciente-toggle-btn" data-mode="existente">Existente</button>
+                    </div>
+                </div>
+                <div class="paciente-fields" id="paciente-nuevo-fields">
+                    <div class="paciente-field">
+                        <label for="paciente-nombre">Nombre</label>
+                        <input type="text" id="paciente-nombre" placeholder="Nombre del paciente">
+                    </div>
+                    <div class="paciente-field">
+                        <label for="paciente-rut">RUT</label>
+                        <input type="text" id="paciente-rut" placeholder="12.345.678-9">
+                    </div>
+                </div>
+                <div class="paciente-fields" id="paciente-existente-fields" style="display: none;">
+                    <div class="paciente-field">
+                        <label for="paciente-select">Seleccionar paciente</label>
+                        <select id="paciente-select">
+                            <option value="">Seleccione un paciente...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="comentario-section">
                 <label for="comentario">Comentario (opcional)</label>
                 <textarea id="comentario" placeholder="Agregar comentario..."></textarea>

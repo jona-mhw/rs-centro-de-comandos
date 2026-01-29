@@ -1,6 +1,10 @@
 // Variables globales
 let selectedCamaId = null;
 let selectedEstadoId = null;
+let selectedPerfilId = null;
+let selectedPacienteId = null;
+let pacienteMode = 'nuevo';
+let currentCamaData = null;
 
 // ==========================================
 // MONITOR DE CAMAS
@@ -33,18 +37,44 @@ function initMonitor() {
     initModalHandlers();
 }
 
-function openEstadoModal(cell) {
+async function openEstadoModal(cell) {
     selectedCamaId = cell.dataset.camaId;
     const estadoActual = cell.dataset.estadoId;
     const codigo = cell.querySelector('.cama-codigo').textContent;
     const sectorCard = cell.closest('.sector-card');
     const sectorName = sectorCard.querySelector('h4').textContent;
 
+    // Obtener datos completos de la cama
+    try {
+        const response = await fetch(`/api/cama/${selectedCamaId}`);
+        if (response.ok) {
+            currentCamaData = await response.json();
+        }
+    } catch (e) {
+        currentCamaData = null;
+    }
+
     // Actualizar info del modal
     document.getElementById('modal-cama-codigo').textContent = codigo;
     document.getElementById('modal-cama-ubicacion').textContent = sectorName;
 
-    // Limpiar seleccion anterior
+    // Mostrar info del paciente actual si existe
+    const pacienteInfo = document.getElementById('modal-cama-paciente');
+    if (pacienteInfo) {
+        if (currentCamaData && currentCamaData.paciente) {
+            pacienteInfo.textContent = `Paciente: ${currentCamaData.paciente.nombre || ''} ${currentCamaData.paciente.rut || ''}`;
+            pacienteInfo.style.display = 'block';
+        } else {
+            pacienteInfo.textContent = '';
+            pacienteInfo.style.display = 'none';
+        }
+    }
+
+    // Limpiar seleccion de perfil
+    selectedPerfilId = null;
+    document.querySelectorAll('.perfil-btn').forEach(btn => btn.classList.remove('selected'));
+
+    // Limpiar seleccion de estado
     document.querySelectorAll('.estado-btn').forEach(btn => {
         btn.classList.remove('selected');
         if (btn.dataset.estadoId === estadoActual) {
@@ -53,11 +83,66 @@ function openEstadoModal(cell) {
         }
     });
 
+    // Ocultar seccion de paciente inicialmente
+    const pacienteSection = document.getElementById('paciente-section');
+    if (pacienteSection) {
+        pacienteSection.style.display = 'none';
+    }
+
+    // Resetear campos de paciente
+    resetPacienteFields();
+
     // Limpiar comentario
     document.getElementById('comentario').value = '';
 
+    // Cargar lista de pacientes para el select
+    await loadPacientesSelect();
+
     // Mostrar modal
     document.getElementById('estado-modal').classList.add('active');
+}
+
+function resetPacienteFields() {
+    selectedPacienteId = null;
+    pacienteMode = 'nuevo';
+
+    const nombreInput = document.getElementById('paciente-nombre');
+    const rutInput = document.getElementById('paciente-rut');
+    const selectPaciente = document.getElementById('paciente-select');
+
+    if (nombreInput) nombreInput.value = '';
+    if (rutInput) rutInput.value = '';
+    if (selectPaciente) selectPaciente.value = '';
+
+    // Resetear toggles
+    document.querySelectorAll('.paciente-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === 'nuevo');
+    });
+
+    const nuevoFields = document.getElementById('paciente-nuevo-fields');
+    const existenteFields = document.getElementById('paciente-existente-fields');
+
+    if (nuevoFields) nuevoFields.style.display = 'flex';
+    if (existenteFields) existenteFields.style.display = 'none';
+}
+
+async function loadPacientesSelect() {
+    try {
+        const response = await fetch('/api/pacientes');
+        const pacientes = await response.json();
+
+        const select = document.getElementById('paciente-select');
+        if (select) {
+            select.innerHTML = '<option value="">Seleccione un paciente...</option>';
+            pacientes.forEach(p => {
+                const nombre = p.nombre || 'Sin nombre';
+                const rut = p.rut || 'Sin RUT';
+                select.innerHTML += `<option value="${p.id}">${nombre} - ${rut}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error cargando pacientes:', error);
+    }
 }
 
 function initModalHandlers() {
@@ -68,13 +153,60 @@ function initModalHandlers() {
         });
     });
 
+    // Seleccion de perfil
+    document.querySelectorAll('.perfil-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedPerfilId = this.dataset.perfilId;
+        });
+    });
+
     // Seleccion de estado
     document.querySelectorAll('.estado-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.estado-btn').forEach(b => b.classList.remove('selected'));
             this.classList.add('selected');
             selectedEstadoId = this.dataset.estadoId;
+
+            // Mostrar/ocultar seccion de paciente segun estado
+            const estadoNombre = this.dataset.estadoNombre;
+            const pacienteSection = document.getElementById('paciente-section');
+
+            if (pacienteSection) {
+                if (estadoNombre === 'Ocupada') {
+                    pacienteSection.style.display = 'block';
+                } else {
+                    pacienteSection.style.display = 'none';
+                }
+            }
         });
+    });
+
+    // Toggle paciente nuevo/existente
+    document.querySelectorAll('.paciente-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.paciente-toggle-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            pacienteMode = this.dataset.mode;
+
+            const nuevoFields = document.getElementById('paciente-nuevo-fields');
+            const existenteFields = document.getElementById('paciente-existente-fields');
+
+            if (pacienteMode === 'nuevo') {
+                nuevoFields.style.display = 'flex';
+                existenteFields.style.display = 'none';
+                selectedPacienteId = null;
+            } else {
+                nuevoFields.style.display = 'none';
+                existenteFields.style.display = 'flex';
+            }
+        });
+    });
+
+    // Seleccionar paciente existente
+    document.getElementById('paciente-select')?.addEventListener('change', function() {
+        selectedPacienteId = this.value || null;
     });
 
     // Guardar estado
@@ -88,6 +220,32 @@ async function guardarEstado() {
     }
 
     const comentario = document.getElementById('comentario').value;
+    const estadoBtn = document.querySelector(`.estado-btn[data-estado-id="${selectedEstadoId}"]`);
+    const estadoNombre = estadoBtn ? estadoBtn.dataset.estadoNombre : '';
+
+    // Preparar datos de paciente si el estado es "Ocupada"
+    let pacienteNombre = '';
+    let pacienteRut = '';
+    let pacienteId = null;
+
+    if (estadoNombre === 'Ocupada') {
+        if (pacienteMode === 'nuevo') {
+            pacienteNombre = document.getElementById('paciente-nombre')?.value || '';
+            pacienteRut = document.getElementById('paciente-rut')?.value || '';
+
+            // Validar que al menos uno este lleno
+            if (!pacienteNombre && !pacienteRut) {
+                alert('Por favor ingrese al menos el nombre o RUT del paciente');
+                return;
+            }
+        } else {
+            pacienteId = selectedPacienteId;
+            if (!pacienteId) {
+                alert('Por favor seleccione un paciente');
+                return;
+            }
+        }
+    }
 
     try {
         const response = await fetch(`/api/cama/${selectedCamaId}/estado`, {
@@ -97,7 +255,11 @@ async function guardarEstado() {
             },
             body: JSON.stringify({
                 estado_id: parseInt(selectedEstadoId),
-                comentario: comentario
+                perfil_id: selectedPerfilId ? parseInt(selectedPerfilId) : null,
+                comentario: comentario,
+                paciente_nombre: pacienteNombre,
+                paciente_rut: pacienteRut,
+                paciente_id: pacienteId ? parseInt(pacienteId) : null
             })
         });
 

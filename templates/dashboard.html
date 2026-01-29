@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Seccion de grafico de registros por semana -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <h3>Registros Historicos por Semana y Perfil</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-registros-semana"></canvas>
+        </div>
+        <div class="chart-legend" id="chart-legend">
+            {% for perfil in perfiles %}
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: {{ perfil.color }}"></span>
+                <span class="legend-label">{{ perfil.nombre }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Seccion de tiempos por estado -->
+    <div class="dashboard-section tiempos-section">
+        <div class="section-header">
+            <h3>Tiempos por Estado</h3>
+        </div>
+        <div class="tiempos-grid" id="tiempos-grid">
+            <!-- Se carga dinamicamente -->
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    cargarGraficoRegistros();
+    cargarTiemposPorEstado();
+
+    // Actualizar tiempos cada minuto
+    setInterval(cargarTiemposPorEstado, 60000);
+});
+
+function cargarGraficoRegistros() {
+    fetch('/api/dashboard/registros-semana')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('chart-registros-semana').getContext('2d');
+
+            const labels = data.semanas.map(s => s.semana);
+            const datasets = data.perfiles.map(perfil => {
+                return {
+                    label: perfil.nombre,
+                    data: data.semanas.map(s => s.perfiles[perfil.nombre] || 0),
+                    backgroundColor: perfil.color,
+                    borderColor: perfil.color,
+                    borderWidth: 1
+                };
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Semana'
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Cantidad Registros'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        });
+}
+
+function cargarTiemposPorEstado() {
+    fetch('/api/dashboard/tiempos-por-estado')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('tiempos-grid');
+            container.innerHTML = '';
+
+            const estadosOrden = ['Esperando Transporte', 'Esperando Limpieza', 'En Limpieza'];
+
+            estadosOrden.forEach(estadoNombre => {
+                if (data[estadoNombre]) {
+                    const estadoData = data[estadoNombre];
+                    const card = document.createElement('div');
+                    card.className = 'tiempo-card';
+                    card.innerHTML = `
+                        <div class="tiempo-card-header" style="border-left-color: ${estadoData.color}">
+                            <h4>${estadoNombre} (H:M)</h4>
+                            <span class="tiempo-count">${estadoData.camas.length} camas</span>
+                        </div>
+                        <div class="tiempo-card-body">
+                            ${estadoData.camas.length > 0 ?
+                                `<table class="tiempo-table">
+                                    <tbody>
+                                        ${estadoData.camas.map(cama => `
+                                            <tr>
+                                                <td class="cama-codigo">${cama.codigo}</td>
+                                                <td class="cama-tiempo">${cama.tiempo_hm}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>` :
+                                '<p class="no-camas">Sin camas en este estado</p>'
+                            }
+                        </div>
+                    `;
+                    container.appendChild(card);
+                }
+            });
+        });
+}
+</script>
+{% endblock %}
