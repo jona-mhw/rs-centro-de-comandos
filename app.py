@@ -135,8 +135,10 @@ def init_datos_dummy():
                 num_camas = random.randint(4, 9)
                 for i in range(1, num_camas + 1):
                     estado_cama = random.choice(estados_demo)
-                    # Tiempo aleatorio en el estado actual (entre 5 min y 24 horas)
-                    tiempo_random = timedelta(minutes=random.randint(5, 1440))
+                    # Tiempo aleatorio en el estado actual (entre 1 y 50 minutos, con segundos variados)
+                    minutos_random = random.randint(1, 50)
+                    segundos_random = random.randint(0, 59)
+                    tiempo_random = timedelta(minutes=minutos_random, seconds=segundos_random)
                     estado_inicio = datetime.utcnow() - tiempo_random
 
                     # Asignar paciente solo si la cama está ocupada o en transporte
@@ -401,7 +403,7 @@ def eliminar_cama(cama_id):
 def estadisticas():
     """Obtiene estadisticas generales"""
     total_camas = Cama.query.filter_by(activo=True).count()
-    estados = EstadoCama.query.filter_by(activo=True).all()
+    estados = EstadoCama.query.filter_by(activo=True).order_by(EstadoCama.orden).all()
 
     stats = {}
     for estado in estados:
@@ -409,6 +411,7 @@ def estadisticas():
         stats[estado.nombre] = {
             'count': count,
             'color': estado.color,
+            'orden': estado.orden,
             'porcentaje': round((count / total_camas * 100) if total_camas > 0 else 0, 1)
         }
 
