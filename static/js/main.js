@@ -311,6 +311,40 @@ async function guardarEstado(confirmarTraslado = false) {
 // ESTADISTICAS
 // ==========================================
 
+// Convierte color hex a HSL y retorna el hue para ordenar
+function hexToHue(hex) {
+    // Remover # si existe
+    hex = hex.replace('#', '');
+
+    const r = parseInt(hex.substr(0, 2), 16) / 255;
+    const g = parseInt(hex.substr(2, 2), 16) / 255;
+    const b = parseInt(hex.substr(4, 2), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+
+    let h = 0;
+    if (max !== min) {
+        const d = max - min;
+        if (max === r) {
+            h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        } else if (max === g) {
+            h = ((b - r) / d + 2) / 6;
+        } else {
+            h = ((r - g) / d + 4) / 6;
+        }
+    }
+
+    // Retornar hue (0-360) y saturación para ordenar grises al final
+    const s = max === min ? 0 : (l > 0.5 ? d / (2 - max - min) : d / (max + min));
+
+    // Si es gris (baja saturación), ponerlo al final
+    if (s < 0.1) return 999;
+
+    return Math.round(h * 360);
+}
+
 async function loadStats() {
     try {
         const response = await fetch('/api/estadisticas');
@@ -330,9 +364,11 @@ function renderStatsChart(data) {
 
     const total = data.total;
 
-    // Ordenar estados por el campo 'orden' de la base de datos
+    // Ordenar estados por color (hue) para agrupar colores similares
     const estados = Object.entries(data.por_estado).sort((a, b) => {
-        return (a[1].orden || 99) - (b[1].orden || 99);
+        const hueA = hexToHue(a[1].color);
+        const hueB = hexToHue(b[1].color);
+        return hueA - hueB;
     });
 
     let cumulativePercent = 0;
@@ -372,9 +408,11 @@ function renderStatsLegend(data) {
     const legendContainer = document.getElementById('stats-legend');
     if (!legendContainer) return;
 
-    // Ordenar por el campo 'orden' de la base de datos
+    // Ordenar por color (hue) para agrupar colores similares - mismo orden que el gráfico
     const estados = Object.entries(data.por_estado).sort((a, b) => {
-        return (a[1].orden || 99) - (b[1].orden || 99);
+        const hueA = hexToHue(a[1].color);
+        const hueB = hexToHue(b[1].color);
+        return hueA - hueB;
     });
 
     legendContainer.innerHTML = estados.map(([nombre, info]) => `
