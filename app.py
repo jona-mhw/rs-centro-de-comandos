@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
-from models import db, Ubicacion, Cama, EstadoCama, HistorialCama
+from models import db, Ubicacion, Cama, EstadoCama, HistorialCama, Perfil, Paciente
+from datetime import datetime, timedelta
+from sqlalchemy import func
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///centro_comandos.db'
@@ -11,14 +13,29 @@ db.init_app(app)
 
 def init_datos_dummy():
     """Inicializa datos dummy para la demo"""
+    # Perfiles de usuario
+    perfiles = [
+        {'nombre': 'Staff de Limpieza', 'color': '#8AC52F'},
+        {'nombre': 'Enfermera', 'color': '#60B2B2'},
+        {'nombre': 'Movilizador', 'color': '#9C27B0'},
+    ]
+
+    for perfil_data in perfiles:
+        if not Perfil.query.filter_by(nombre=perfil_data['nombre']).first():
+            perfil = Perfil(**perfil_data)
+            db.session.add(perfil)
+
+    db.session.commit()
+
     # Estados de cama
     estados = [
         {'nombre': 'Disponible', 'color': '#4CAF50', 'descripcion': 'Cama lista para recibir paciente', 'orden': 1},
         {'nombre': 'Ocupada', 'color': '#F44336', 'descripcion': 'Cama con paciente', 'orden': 2},
-        {'nombre': 'En Limpieza', 'color': '#FF9800', 'descripcion': 'Cama en proceso de higienizacion', 'orden': 3},
-        {'nombre': 'En Espera', 'color': '#FFC107', 'descripcion': 'Esperando asignacion', 'orden': 4},
-        {'nombre': 'Mantenimiento', 'color': '#9E9E9E', 'descripcion': 'Cama en mantenimiento', 'orden': 5},
-        {'nombre': 'Bloqueada', 'color': '#607D8B', 'descripcion': 'Cama no disponible', 'orden': 6},
+        {'nombre': 'Esperando Transporte', 'color': '#9C27B0', 'descripcion': 'Esperando traslado de paciente', 'orden': 3},
+        {'nombre': 'Esperando Limpieza', 'color': '#FFC107', 'descripcion': 'Cama esperando ser limpiada', 'orden': 4},
+        {'nombre': 'En Limpieza', 'color': '#FF9800', 'descripcion': 'Cama en proceso de higienizacion', 'orden': 5},
+        {'nombre': 'Mantenimiento', 'color': '#9E9E9E', 'descripcion': 'Cama en mantenimiento', 'orden': 6},
+        {'nombre': 'Bloqueada', 'color': '#607D8B', 'descripcion': 'Cama no disponible', 'orden': 7},
     ]
 
     for estado_data in estados:
@@ -49,13 +66,42 @@ def init_datos_dummy():
         },
     ]
 
+    # Obtener todos los estados
     estado_disponible = EstadoCama.query.filter_by(nombre='Disponible').first()
     estado_ocupada = EstadoCama.query.filter_by(nombre='Ocupada').first()
-    estado_limpieza = EstadoCama.query.filter_by(nombre='En Limpieza').first()
+    estado_esp_transporte = EstadoCama.query.filter_by(nombre='Esperando Transporte').first()
+    estado_esp_limpieza = EstadoCama.query.filter_by(nombre='Esperando Limpieza').first()
+    estado_en_limpieza = EstadoCama.query.filter_by(nombre='En Limpieza').first()
 
-    estados_demo = [estado_disponible, estado_ocupada, estado_limpieza, estado_disponible, estado_ocupada]
+    estados_demo = [
+        estado_disponible, estado_ocupada, estado_ocupada,
+        estado_esp_transporte, estado_esp_limpieza, estado_en_limpieza,
+        estado_disponible, estado_ocupada
+    ]
 
     import random
+
+    # Crear pacientes dummy
+    pacientes_dummy = [
+        {'nombre': 'Juan Pérez', 'rut': '12.345.678-9'},
+        {'nombre': 'María González', 'rut': '9.876.543-2'},
+        {'nombre': 'Pedro Soto', 'rut': '15.432.167-K'},
+        {'nombre': 'Ana Martínez', 'rut': '8.765.432-1'},
+        {'nombre': 'Carlos Rojas', 'rut': '11.222.333-4'},
+        {'nombre': 'Lucía Fernández', 'rut': '14.555.666-7'},
+        {'nombre': 'Roberto Silva', 'rut': '7.888.999-0'},
+        {'nombre': 'Carmen López', 'rut': '16.111.222-3'},
+    ]
+
+    for paciente_data in pacientes_dummy:
+        if not Paciente.query.filter_by(rut=paciente_data['rut']).first():
+            paciente = Paciente(**paciente_data)
+            db.session.add(paciente)
+
+    db.session.commit()
+
+    pacientes = Paciente.query.all()
+    perfiles = Perfil.query.all()
 
     for torre_data in estructuras:
         if Ubicacion.query.filter_by(nombre=torre_data['nombre'], tipo='torre').first():
@@ -88,14 +134,49 @@ def init_datos_dummy():
                 # Crear camas para cada sector
                 num_camas = random.randint(4, 9)
                 for i in range(1, num_camas + 1):
+                    estado_cama = random.choice(estados_demo)
+                    # Tiempo aleatorio en el estado actual (entre 5 min y 24 horas)
+                    tiempo_random = timedelta(minutes=random.randint(5, 1440))
+                    estado_inicio = datetime.utcnow() - tiempo_random
+
+                    # Asignar paciente solo si la cama está ocupada o en transporte
+                    paciente_id = None
+                    if estado_cama.nombre in ['Ocupada', 'Esperando Transporte']:
+                        paciente_id = random.choice(pacientes).id if pacientes else None
+
                     cama = Cama(
                         codigo=f'{sector_nombre[:3].upper()}-{i:02d}',
                         nombre=f'Cama {i}',
                         ubicacion_id=sector.id,
-                        estado_id=random.choice(estados_demo).id,
+                        estado_id=estado_cama.id,
+                        paciente_id=paciente_id,
+                        estado_inicio=estado_inicio,
                         orden=i
                     )
                     db.session.add(cama)
+
+    db.session.commit()
+
+    # Generar historial dummy para estadísticas (últimas 6 semanas)
+    camas = Cama.query.all()
+    for semana in range(6):
+        for _ in range(random.randint(15, 40)):
+            cama = random.choice(camas)
+            perfil = random.choice(perfiles)
+            estado_anterior = random.choice(estados_demo)
+            estado_nuevo = random.choice(estados_demo)
+
+            fecha = datetime.utcnow() - timedelta(weeks=semana, days=random.randint(0, 6), hours=random.randint(0, 23))
+
+            historial = HistorialCama(
+                cama_id=cama.id,
+                estado_anterior_id=estado_anterior.id,
+                estado_nuevo_id=estado_nuevo.id,
+                perfil_id=perfil.id,
+                usuario=f'Usuario {perfil.nombre}',
+                created_at=fecha
+            )
+            db.session.add(historial)
 
     db.session.commit()
 
@@ -105,7 +186,8 @@ def index():
     """Vista principal - Monitor de camas"""
     torres = Ubicacion.query.filter_by(tipo='torre', activo=True).all()
     estados = EstadoCama.query.filter_by(activo=True).order_by(EstadoCama.orden).all()
-    return render_template('index.html', torres=torres, estados=estados)
+    perfiles = Perfil.query.filter_by(activo=True).all()
+    return render_template('index.html', torres=torres, estados=estados, perfiles=perfiles)
 
 
 @app.route('/api/ubicacion/<int:ubicacion_id>/camas')
@@ -119,6 +201,13 @@ def get_camas_ubicacion(ubicacion_id):
     })
 
 
+@app.route('/api/cama/<int:cama_id>')
+def get_cama(cama_id):
+    """Obtiene los datos de una cama"""
+    cama = Cama.query.get_or_404(cama_id)
+    return jsonify(cama.to_dict())
+
+
 @app.route('/api/cama/<int:cama_id>/estado', methods=['POST'])
 def cambiar_estado_cama(cama_id):
     """Cambia el estado de una cama"""
@@ -126,25 +215,54 @@ def cambiar_estado_cama(cama_id):
     data = request.get_json()
 
     nuevo_estado_id = data.get('estado_id')
+    perfil_id = data.get('perfil_id')
     comentario = data.get('comentario', '')
+    paciente_nombre = data.get('paciente_nombre', '').strip()
+    paciente_rut = data.get('paciente_rut', '').strip()
+    paciente_id = data.get('paciente_id')
 
     if not nuevo_estado_id:
         return jsonify({'error': 'estado_id es requerido'}), 400
 
     nuevo_estado = EstadoCama.query.get_or_404(nuevo_estado_id)
 
+    # Manejar paciente si el nuevo estado es "Ocupada"
+    if nuevo_estado.nombre == 'Ocupada':
+        if paciente_id:
+            # Usar paciente existente
+            cama.paciente_id = paciente_id
+        elif paciente_nombre or paciente_rut:
+            # Crear o buscar paciente
+            if paciente_rut:
+                paciente = Paciente.query.filter_by(rut=paciente_rut).first()
+            else:
+                paciente = None
+
+            if not paciente:
+                paciente = Paciente(nombre=paciente_nombre, rut=paciente_rut)
+                db.session.add(paciente)
+                db.session.flush()
+
+            cama.paciente_id = paciente.id
+    elif nuevo_estado.nombre == 'Disponible':
+        # Limpiar paciente cuando la cama queda disponible
+        cama.paciente_id = None
+
     # Guardar historial
     historial = HistorialCama(
         cama_id=cama.id,
         estado_anterior_id=cama.estado_id,
         estado_nuevo_id=nuevo_estado_id,
+        perfil_id=perfil_id,
+        paciente_id=cama.paciente_id,
         comentario=comentario,
         usuario='Demo User'
     )
     db.session.add(historial)
 
-    # Actualizar estado
+    # Actualizar estado y resetear tiempo
     cama.estado_id = nuevo_estado_id
+    cama.estado_inicio = datetime.utcnow()
     db.session.commit()
 
     return jsonify({
@@ -246,6 +364,117 @@ def estadisticas():
         'total': total_camas,
         'por_estado': stats
     })
+
+
+@app.route('/dashboard')
+def dashboard():
+    """Vista del dashboard con estadísticas"""
+    perfiles = Perfil.query.filter_by(activo=True).all()
+    estados = EstadoCama.query.filter_by(activo=True).order_by(EstadoCama.orden).all()
+    return render_template('dashboard.html', perfiles=perfiles, estados=estados)
+
+
+@app.route('/api/dashboard/registros-semana')
+def registros_por_semana():
+    """Obtiene registros históricos agrupados por semana y perfil"""
+    perfiles = Perfil.query.filter_by(activo=True).all()
+
+    # Obtener las últimas 6 semanas
+    hoy = datetime.utcnow()
+    semanas = []
+
+    for i in range(5, -1, -1):
+        inicio_semana = hoy - timedelta(weeks=i, days=hoy.weekday())
+        inicio_semana = inicio_semana.replace(hour=0, minute=0, second=0, microsecond=0)
+        fin_semana = inicio_semana + timedelta(days=6, hours=23, minutes=59, seconds=59)
+
+        semana_data = {
+            'semana': inicio_semana.strftime('%d/%m/%Y'),
+            'perfiles': {}
+        }
+
+        for perfil in perfiles:
+            count = HistorialCama.query.filter(
+                HistorialCama.perfil_id == perfil.id,
+                HistorialCama.created_at >= inicio_semana,
+                HistorialCama.created_at <= fin_semana
+            ).count()
+            semana_data['perfiles'][perfil.nombre] = count
+
+        semanas.append(semana_data)
+
+    return jsonify({
+        'semanas': semanas,
+        'perfiles': [{'nombre': p.nombre, 'color': p.color} for p in perfiles]
+    })
+
+
+@app.route('/api/dashboard/tiempos-por-estado')
+def tiempos_por_estado():
+    """Obtiene las camas agrupadas por estado con tiempo transcurrido"""
+    # Estados que queremos mostrar con tiempos
+    estados_tiempo = ['Esperando Transporte', 'Esperando Limpieza', 'En Limpieza']
+
+    resultado = {}
+
+    for estado_nombre in estados_tiempo:
+        estado = EstadoCama.query.filter_by(nombre=estado_nombre).first()
+        if estado:
+            camas = Cama.query.filter_by(estado_id=estado.id, activo=True).all()
+            camas_data = []
+            for cama in camas:
+                camas_data.append({
+                    'codigo': cama.codigo,
+                    'tiempo_hm': cama.tiempo_en_estado_str(),
+                    'tiempo_minutos': cama.tiempo_en_estado_minutos(),
+                    'paciente': cama.paciente.to_dict() if cama.paciente else None
+                })
+            # Ordenar por tiempo descendente
+            camas_data.sort(key=lambda x: x['tiempo_minutos'], reverse=True)
+            resultado[estado_nombre] = {
+                'color': estado.color,
+                'camas': camas_data
+            }
+
+    return jsonify(resultado)
+
+
+@app.route('/api/perfiles')
+def get_perfiles():
+    """Obtiene todos los perfiles activos"""
+    perfiles = Perfil.query.filter_by(activo=True).all()
+    return jsonify([p.to_dict() for p in perfiles])
+
+
+@app.route('/api/pacientes')
+def get_pacientes():
+    """Obtiene todos los pacientes activos"""
+    pacientes = Paciente.query.filter_by(activo=True).all()
+    return jsonify([p.to_dict() for p in pacientes])
+
+
+@app.route('/api/paciente', methods=['POST'])
+def crear_paciente():
+    """Crea un nuevo paciente"""
+    data = request.get_json()
+
+    nombre = data.get('nombre', '').strip()
+    rut = data.get('rut', '').strip()
+
+    if not nombre and not rut:
+        return jsonify({'error': 'Se requiere al menos nombre o RUT'}), 400
+
+    # Verificar si el paciente ya existe por RUT
+    if rut:
+        paciente_existente = Paciente.query.filter_by(rut=rut).first()
+        if paciente_existente:
+            return jsonify({'success': True, 'paciente': paciente_existente.to_dict(), 'existente': True})
+
+    paciente = Paciente(nombre=nombre, rut=rut)
+    db.session.add(paciente)
+    db.session.commit()
+
+    return jsonify({'success': True, 'paciente': paciente.to_dict(), 'existente': False})
 
 
 if __name__ == '__main__':

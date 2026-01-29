@@ -637,6 +637,16 @@ body {
     font-size: 0.875rem;
 }
 
+.cama-paciente-modal {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--primary);
+    margin-top: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: rgba(47, 126, 129, 0.1);
+    border-radius: 4px;
+}
+
 .estados-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -934,5 +944,319 @@ body {
 
     .hex-cell {
         --hex-size: 60px;
+    }
+}
+
+/* ========================================
+   DASHBOARD STYLES
+   ======================================== */
+
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.dashboard-section {
+    background: var(--bg-white);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Grafico de registros */
+.chart-container {
+    height: 300px;
+    margin-bottom: 1rem;
+}
+
+.chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    padding-top: 1rem;
+}
+
+.chart-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chart-legend .legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+.chart-legend .legend-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Tiempos por estado */
+.tiempos-section {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+.tiempos-section .section-header {
+    background: var(--bg-white);
+    border-radius: 12px 12px 0 0;
+    padding: 1.5rem;
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.tiempos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.tiempo-card {
+    background: var(--bg-white);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.tiempo-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: var(--bg-gray);
+    border-left: 4px solid var(--primary);
+}
+
+.tiempo-card-header h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.tiempo-count {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: var(--bg-white);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+}
+
+.tiempo-card-body {
+    padding: 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.tiempo-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tiempo-table tr {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tiempo-table tr:last-child {
+    border-bottom: none;
+}
+
+.tiempo-table tr:hover {
+    background: var(--bg-gray);
+}
+
+.tiempo-table td {
+    padding: 0.875rem 1.25rem;
+}
+
+.tiempo-table .cama-codigo {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+}
+
+.tiempo-table .cama-tiempo {
+    text-align: right;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--primary);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+.no-camas {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem;
+    font-style: italic;
+}
+
+/* Perfil selector en modal */
+.perfil-section {
+    margin-bottom: 1.5rem;
+}
+
+.perfil-section label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.perfiles-grid {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.perfil-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: var(--bg-white);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.perfil-btn:hover {
+    border-color: var(--perfil-color, var(--primary));
+    background: rgba(0,0,0,0.02);
+}
+
+.perfil-btn.selected {
+    border-color: var(--perfil-color, var(--primary));
+    background: rgba(0,0,0,0.02);
+    box-shadow: 0 0 0 3px rgba(47, 126, 129, 0.1);
+}
+
+.perfil-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+/* Paciente section en modal */
+.paciente-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-gray);
+    border-radius: 8px;
+}
+
+.paciente-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.paciente-section-header h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.paciente-toggle {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.paciente-toggle-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.paciente-toggle-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.paciente-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.paciente-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.paciente-field label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.paciente-field input,
+.paciente-field select {
+    padding: 0.625rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.paciente-field input:focus,
+.paciente-field select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.paciente-info-display {
+    padding: 0.75rem;
+    background: var(--bg-white);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.paciente-info-display .paciente-nombre {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.paciente-info-display .paciente-rut {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Responsive dashboard */
+@media (max-width: 768px) {
+    .tiempos-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-legend {
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 }
