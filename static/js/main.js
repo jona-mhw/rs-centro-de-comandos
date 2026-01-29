@@ -13,7 +13,7 @@ let currentCamaData = null;
 function initMonitor() {
     // Tabs de torres
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const torreId = this.dataset.torreId;
 
             // Actualizar tabs
@@ -28,7 +28,7 @@ function initMonitor() {
 
     // Click en celdas hexagonales
     document.querySelectorAll('.hex-cell').forEach(cell => {
-        cell.addEventListener('click', function() {
+        cell.addEventListener('click', function () {
             openEstadoModal(this);
         });
     });
@@ -148,14 +148,14 @@ async function loadPacientesSelect() {
 function initModalHandlers() {
     // Cerrar modales
     document.querySelectorAll('.modal-close, .modal-cancel, .modal-overlay').forEach(el => {
-        el.addEventListener('click', function() {
+        el.addEventListener('click', function () {
             this.closest('.modal').classList.remove('active');
         });
     });
 
     // Seleccion de perfil
     document.querySelectorAll('.perfil-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('selected'));
             this.classList.add('selected');
             selectedPerfilId = this.dataset.perfilId;
@@ -164,7 +164,7 @@ function initModalHandlers() {
 
     // Seleccion de estado
     document.querySelectorAll('.estado-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             document.querySelectorAll('.estado-btn').forEach(b => b.classList.remove('selected'));
             this.classList.add('selected');
             selectedEstadoId = this.dataset.estadoId;
@@ -185,7 +185,7 @@ function initModalHandlers() {
 
     // Toggle paciente nuevo/existente
     document.querySelectorAll('.paciente-toggle-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             document.querySelectorAll('.paciente-toggle-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             pacienteMode = this.dataset.mode;
@@ -205,7 +205,7 @@ function initModalHandlers() {
     });
 
     // Seleccionar paciente existente
-    document.getElementById('paciente-select')?.addEventListener('change', function() {
+    document.getElementById('paciente-select')?.addEventListener('change', function () {
         selectedPacienteId = this.value || null;
     });
 
@@ -313,8 +313,14 @@ async function guardarEstado(confirmarTraslado = false) {
 
 // Convierte color hex a HSL y retorna el hue para ordenar
 function hexToHue(hex) {
+    // Verificar si hex es válido
+    if (!hex) return 1000;
+
     // Remover # si existe
     hex = hex.replace('#', '');
+
+    // Verificar que tenga el formato correcto (6 caracteres)
+    if (hex.length !== 6) return 1000;
 
     const r = parseInt(hex.substr(0, 2), 16) / 255;
     const g = parseInt(hex.substr(2, 2), 16) / 255;
@@ -322,25 +328,21 @@ function hexToHue(hex) {
 
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
-    const l = (max + min) / 2;
+    const d = max - min;
 
-    let h = 0;
-    if (max !== min) {
-        const d = max - min;
-        if (max === r) {
-            h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-        } else if (max === g) {
-            h = ((b - r) / d + 2) / 6;
-        } else {
-            h = ((r - g) / d + 4) / 6;
-        }
+    if (d === 0) {
+        // Es gris, usar lightness para ordenar (del más oscuro al más claro)
+        return 900 + (max * 100);
     }
 
-    // Retornar hue (0-360) y saturación para ordenar grises al final
-    const s = max === min ? 0 : (l > 0.5 ? d / (2 - max - min) : d / (max + min));
-
-    // Si es gris (baja saturación), ponerlo al final
-    if (s < 0.1) return 999;
+    let h = 0;
+    if (max === r) {
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    } else if (max === g) {
+        h = ((b - r) / d + 2) / 6;
+    } else {
+        h = ((r - g) / d + 4) / 6;
+    }
 
     return Math.round(h * 360);
 }
@@ -364,11 +366,9 @@ function renderStatsChart(data) {
 
     const total = data.total;
 
-    // Ordenar estados por color (hue) para agrupar colores similares
+    // Ordenar estados por su propiedad 'orden' para que sea consistente
     const estados = Object.entries(data.por_estado).sort((a, b) => {
-        const hueA = hexToHue(a[1].color);
-        const hueB = hexToHue(b[1].color);
-        return hueA - hueB;
+        return a[1].orden - b[1].orden;
     });
 
     let cumulativePercent = 0;
@@ -376,6 +376,8 @@ function renderStatsChart(data) {
 
     estados.forEach(([nombre, info]) => {
         const percent = info.porcentaje;
+        if (percent <= 0) return;
+
         const dashArray = `${percent} ${100 - percent}`;
         const dashOffset = 100 - cumulativePercent;
 
@@ -387,6 +389,7 @@ function renderStatsChart(data) {
                 stroke-width="20"
                 stroke-dasharray="${dashArray}"
                 stroke-dashoffset="${dashOffset}"
+                pathLength="100"
             />
         `;
 
@@ -408,11 +411,9 @@ function renderStatsLegend(data) {
     const legendContainer = document.getElementById('stats-legend');
     if (!legendContainer) return;
 
-    // Ordenar por color (hue) para agrupar colores similares - mismo orden que el gráfico
+    // Ordenar por orden para que coincida con el gráfico
     const estados = Object.entries(data.por_estado).sort((a, b) => {
-        const hueA = hexToHue(a[1].color);
-        const hueB = hexToHue(b[1].color);
-        return hueA - hueB;
+        return a[1].orden - b[1].orden;
     });
 
     legendContainer.innerHTML = estados.map(([nombre, info]) => `
@@ -454,7 +455,7 @@ function initUbicaciones() {
 
     // Agregar piso
     document.querySelectorAll('.btn-add-piso').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const torreId = this.closest('.torre-item').dataset.id;
             openUbicacionModal('piso', torreId, 'Nuevo Piso');
         });
@@ -462,7 +463,7 @@ function initUbicaciones() {
 
     // Agregar sector
     document.querySelectorAll('.btn-add-sector').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const pisoId = this.closest('.piso-item').dataset.id;
             openUbicacionModal('sector', pisoId, 'Nuevo Sector');
         });
@@ -470,12 +471,12 @@ function initUbicaciones() {
 
     // Editar ubicacion
     document.querySelectorAll('.tree-item .btn-edit').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const item = this.closest('.tree-item');
             const id = item.dataset.id;
             const nombre = item.querySelector('.tree-name').textContent;
             const tipo = item.classList.contains('torre-item') ? 'torre' :
-                        item.classList.contains('piso-item') ? 'piso' : 'sector';
+                item.classList.contains('piso-item') ? 'piso' : 'sector';
 
             openUbicacionModal(tipo, null, `Editar ${tipo}`, id, nombre);
         });
@@ -483,7 +484,7 @@ function initUbicaciones() {
 
     // Agregar cama
     document.querySelectorAll('.btn-add-cama').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const sectorId = this.closest('.sector-item').dataset.id;
             openCamaModal(sectorId);
         });
@@ -491,7 +492,7 @@ function initUbicaciones() {
 
     // Eliminar ubicacion
     document.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', async function() {
+        btn.addEventListener('click', async function () {
             if (!confirm('Desea eliminar esta ubicacion?')) return;
 
             const item = this.closest('.tree-item');
@@ -513,7 +514,7 @@ function initUbicaciones() {
 
     // Eliminar cama
     document.querySelectorAll('.tag-delete').forEach(btn => {
-        btn.addEventListener('click', async function(e) {
+        btn.addEventListener('click', async function (e) {
             e.stopPropagation();
             if (!confirm('Desea eliminar esta cama?')) return;
 
