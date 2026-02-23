@@ -115,6 +115,15 @@ function cargarTiemposPorEstado() {
     fetch('/api/dashboard/tiempos-por-estado')
         .then(response => response.json())
         .then(data => {
+            // Agregar offset aleatorio a cada cama para dar sensación de realidad
+            Object.keys(data).forEach(estadoNombre => {
+                data[estadoNombre].camas.forEach(cama => {
+                    // Offset entre 0 y 59 segundos (un minuto máximo)
+                    // Esto hace que cada timer parta en un segundo diferente
+                    cama.offset_segundos = Math.floor(Math.random() * 60);
+                    cama.tiempo_actual = cama.tiempo_segundos + cama.offset_segundos;
+                });
+            });
             tiemposData = data; // Guardar para actualización local
             renderTiempos(data);
         });
@@ -123,10 +132,10 @@ function cargarTiemposPorEstado() {
 function actualizarTiemposLocal() {
     if (!tiemposData) return;
 
-    // Incrementar segundos localmente para cada cama
+    // Incrementar tiempo_actual de todas las camas juntas
     Object.keys(tiemposData).forEach(estadoNombre => {
         tiemposData[estadoNombre].camas.forEach(cama => {
-            cama.tiempo_segundos += 1;
+            cama.tiempo_actual += 1;
         });
     });
 
@@ -136,7 +145,7 @@ function actualizarTiemposLocal() {
     Object.keys(tiemposData).forEach(estadoNombre => {
         tiemposData[estadoNombre].camas.forEach(cama => {
             if (tiempoCells[index]) {
-                tiempoCells[index].textContent = formatTiempo(cama.tiempo_segundos);
+                tiempoCells[index].textContent = formatTiempo(cama.tiempo_actual);
             }
             index++;
         });
@@ -166,7 +175,7 @@ function renderTiempos(data) {
                                 ${estadoData.camas.map(cama => `
                                     <tr>
                                         <td class="cama-codigo">${cama.codigo}</td>
-                                        <td class="cama-tiempo">${formatTiempo(cama.tiempo_segundos)}</td>
+                                        <td class="cama-tiempo">${formatTiempo(cama.tiempo_actual)}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
