@@ -24,7 +24,9 @@
 
     /* Sidebar */
     --sidebar-width: 260px;
+    --sidebar-collapsed-width: 64px;
     --sidebar-bg: linear-gradient(180deg, #2F7E81 0%, #27969E 100%);
+    --sidebar-transition: 0.25s ease;
 }
 
 /* Reset y base */
@@ -42,6 +44,7 @@ body {
 }
 
 /* Layout principal */
+/* ── Sidebar (#11 hamburguesa colapsable) ─────────────────────── */
 .sidebar {
     position: fixed;
     left: 0;
@@ -53,22 +56,54 @@ body {
     display: flex;
     flex-direction: column;
     z-index: 100;
+    transition: width var(--sidebar-transition);
+    overflow: hidden;
+}
+
+/* Botón hamburguesa */
+.hamburger-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.hamburger-btn:hover { background: rgba(255,255,255,0.15); }
+.hamburger-btn span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: white;
+    border-radius: 2px;
+    transition: all var(--sidebar-transition);
 }
 
 .sidebar-header {
-    padding: 1.5rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    white-space: nowrap;
 }
 
 .logo {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    overflow: hidden;
 }
 
 .logo-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     background: white;
     color: var(--primary);
     border-radius: 8px;
@@ -76,12 +111,14 @@ body {
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 .logo-text {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 600;
+    transition: opacity var(--sidebar-transition), width var(--sidebar-transition);
+    overflow: hidden;
 }
 
 .nav-menu {
@@ -91,18 +128,20 @@ body {
 }
 
 .nav-item {
-    margin: 0.25rem 0.75rem;
+    margin: 0.25rem 0.5rem;
 }
 
 .nav-link {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem;
     color: rgba(255,255,255,0.8);
     text-decoration: none;
     border-radius: 8px;
     transition: all 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .nav-link:hover {
@@ -118,22 +157,31 @@ body {
 .nav-icon {
     width: 20px;
     height: 20px;
+    min-width: 20px;
+}
+
+.nav-label {
+    transition: opacity var(--sidebar-transition);
+    overflow: hidden;
 }
 
 .sidebar-footer {
-    padding: 1rem 1.5rem;
+    padding: 1rem 0.75rem;
     border-top: 1px solid rgba(255,255,255,0.1);
+    overflow: hidden;
 }
 
 .user-info {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    white-space: nowrap;
 }
 
 .user-avatar {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
     background: rgba(255,255,255,0.2);
     border-radius: 50%;
     display: flex;
@@ -145,6 +193,8 @@ body {
 .user-details {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    transition: opacity var(--sidebar-transition);
 }
 
 .user-name {
@@ -157,10 +207,30 @@ body {
     opacity: 0.7;
 }
 
+/* Estado colapsado */
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+}
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .user-details {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
+}
+.sidebar.collapsed .hamburger-btn span:nth-child(2) {
+    opacity: 0;
+    width: 12px;
+}
+
 /* Main content */
 .main-content {
     margin-left: var(--sidebar-width);
     min-height: 100vh;
+    transition: margin-left var(--sidebar-transition);
+}
+.main-content.sidebar-collapsed {
+    margin-left: var(--sidebar-collapsed-width);
 }
 
 .top-header {
@@ -1340,4 +1410,80 @@ body {
     .demo-text {
         font-size: 0.75rem;
     }
+}
+
+/* ── Pills de estados en header (#13) ────────────────────────── */
+.states-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.state-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.65rem;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: default;
+    border: 2px solid transparent;
+    transition: transform 0.15s;
+}
+.state-pill:hover { transform: scale(1.05); }
+
+/* Fill (estado sólido) */
+.state-pill.fill {
+    color: white;
+    border-color: transparent;
+}
+
+/* Border (estado con borde, fondo semitransparente) */
+.state-pill.border-state {
+    background: rgba(255,255,255,0.9) !important;
+    color: var(--text-primary) !important;
+    font-weight: 600;
+}
+
+.state-pill .pill-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.state-pill.border-state .pill-dot {
+    border: 2px solid currentColor;
+    background: transparent;
+}
+
+.state-pill .pill-count {
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+/* ── Hexágonos con estado borde (#13) ────────────────────────── */
+.hex-cell.border-state {
+    --border-c: var(--cell-color);
+}
+.hex-cell.border-state .hex-inner {
+    background: color-mix(in srgb, var(--cell-color) 15%, white) !important;
+    border: 3px solid var(--cell-color);
+}
+.hex-cell.border-state .cama-codigo,
+.hex-cell.border-state .cama-estado {
+    color: var(--text-primary) !important;
+    text-shadow: none !important;
+}
+
+/* ── Responsive sidebar colapsado ────────────────────────────── */
+@media (max-width: 768px) {
+    .sidebar { width: var(--sidebar-collapsed-width); }
+    .sidebar .logo-text,
+    .sidebar .nav-label,
+    .sidebar .user-details { opacity: 0; width: 0; pointer-events: none; }
+    .main-content { margin-left: var(--sidebar-collapsed-width); }
+    .main-content.sidebar-collapsed { margin-left: var(--sidebar-collapsed-width); }
 }

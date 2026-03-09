@@ -4,25 +4,15 @@
 {% block page_title %}Monitor de Camas{% endblock %}
 
 {% block header_actions %}
-<div class="stats-summary" id="stats-summary">
-    <!-- Se carga dinamicamente -->
+<!-- Pills de todos los estados — cargadas dinámicamente (#13) -->
+<div class="states-pills" id="states-pills">
+    <!-- Se carga via loadStats() -->
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="monitor-container">
-    <!-- Panel de estadisticas -->
-    <div class="stats-panel">
-        <h3>Estado del Sistema</h3>
-        <div class="stats-chart" id="stats-chart">
-            <!-- Grafico circular -->
-        </div>
-        <div class="stats-legend" id="stats-legend">
-            <!-- Leyenda de estados -->
-        </div>
-    </div>
-
-    <!-- Panel principal de camas -->
+    <!-- Panel principal de camas (stats-panel eliminado — issue #12) -->
     <div class="beds-panel">
         <div class="location-tabs">
             {% for torre in torres %}
@@ -50,7 +40,7 @@
                                 {% for row in camas_activas|batch(sector.camas_por_fila) %}
                                 <div class="hex-row">
                                     {% for cama in row %}
-                                    <div class="hex-cell"
+                                    <div class="hex-cell {% if cama.estado.border_color %}border-state{% endif %}"
                                          data-cama-id="{{ cama.id }}"
                                          data-estado-id="{{ cama.estado_id }}"
                                          style="--cell-color: {{ cama.estado.color }};"

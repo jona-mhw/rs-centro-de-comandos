@@ -427,20 +427,45 @@ function renderStatsLegend(data) {
 }
 
 function renderStatsSummary(data) {
-    const summaryContainer = document.getElementById('stats-summary');
-    if (!summaryContainer) return;
+    // Soporte para nuevo contenedor pills (#13) y legacy
+    const pillsContainer  = document.getElementById('states-pills');
+    const legacyContainer = document.getElementById('stats-summary');
+    const container = pillsContainer || legacyContainer;
+    if (!container) return;
 
-    // Mostrar solo los principales
-    const principales = ['Disponible', 'Ocupada', 'En Limpieza'];
-    const estados = Object.entries(data.por_estado).filter(([nombre]) => principales.includes(nombre));
+    const estados = Object.entries(data.por_estado).sort((a, b) => a[1].orden - b[1].orden);
 
-    summaryContainer.innerHTML = estados.map(([nombre, info]) => `
-        <div class="stat-item">
-            <span class="stat-color" style="background-color: ${info.color};"></span>
-            <span class="stat-label">${nombre}</span>
-            <span class="stat-value">${info.count}</span>
-        </div>
-    `).join('');
+    if (pillsContainer) {
+        // Nueva UI: pills con todos los estados, soporte border-state
+        pillsContainer.innerHTML = estados.map(([nombre, info]) => {
+            const isBorder = !!info.border_color;
+            const color    = info.color;
+            const pillStyle = isBorder
+                ? `border-color: ${color};`
+                : `background-color: ${color};`;
+            const dotStyle = isBorder
+                ? `border: 2px solid ${color}; background: transparent;`
+                : `background-color: rgba(255,255,255,0.7);`;
+            const textColor = isBorder ? color : 'white';
+            return `
+                <div class="state-pill ${isBorder ? 'border-state' : 'fill'}"
+                     style="${pillStyle} color: ${textColor};"
+                     title="${nombre}: ${info.count} camas (${info.porcentaje}%)">
+                    <span class="pill-dot" style="${dotStyle}"></span>
+                    <span class="pill-label">${nombre}</span>
+                    <span class="pill-count">${info.count}</span>
+                </div>`;
+        }).join('');
+    } else {
+        // Fallback legacy
+        legacyContainer.innerHTML = estados.map(([nombre, info]) => `
+            <div class="stat-item">
+                <span class="stat-color" style="background-color: ${info.color};"></span>
+                <span class="stat-label">${nombre}</span>
+                <span class="stat-value">${info.count}</span>
+            </div>
+        `).join('');
+    }
 }
 
 // ==========================================

@@ -84,7 +84,8 @@ class EstadoCama(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
-    color = db.Column(db.String(7), nullable=False)  # Color hexadecimal
+    color = db.Column(db.String(7), nullable=False)  # Color hexadecimal (fill o borde)
+    border_color = db.Column(db.String(7), nullable=True)  # Si está seteado → estilo borde, no fill
     descripcion = db.Column(db.String(200))
     orden = db.Column(db.Integer, default=0)
     activo = db.Column(db.Boolean, default=True)
@@ -97,6 +98,7 @@ class EstadoCama(db.Model):
             'id': self.id,
             'nombre': self.nombre,
             'color': self.color,
+            'border_color': self.border_color,
             'descripcion': self.descripcion
         }
 
