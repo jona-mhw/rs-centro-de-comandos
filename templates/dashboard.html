@@ -5,6 +5,34 @@
 
 {% block content %}
 <div class="dashboard-container">
+
+    <!-- ── KPI Cards (#16) ── -->
+    <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card" id="kpi-total">
+            <div class="kpi-icon">📊</div>
+            <div class="kpi-value">—</div>
+            <div class="kpi-label">Total Registros</div>
+        </div>
+        <div class="kpi-card kpi-green" id="kpi-gestionadas">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value">—</div>
+            <div class="kpi-label">Altas Gestionadas en OperOn</div>
+            <div class="kpi-sub"></div>
+        </div>
+        <div class="kpi-card kpi-teal" id="kpi-cierre">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-value">—</div>
+            <div class="kpi-label">Altas con Cierre Exitoso</div>
+            <div class="kpi-sub"></div>
+        </div>
+        <div class="kpi-card kpi-purple" id="kpi-usabilidad">
+            <div class="kpi-icon">⭕</div>
+            <div class="kpi-value">—</div>
+            <div class="kpi-label">Usabilidad</div>
+            <div class="kpi-sub"></div>
+        </div>
+    </div>
+
     <!-- Seccion de grafico de registros por semana -->
     <div class="dashboard-section">
         <div class="section-header">
@@ -41,6 +69,7 @@
 let tiemposData = null; // Almacena los datos para actualización local
 
 document.addEventListener('DOMContentLoaded', function() {
+    cargarKPIs();
     cargarGraficoRegistros();
     cargarTiemposPorEstado();
 
@@ -50,6 +79,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Refrescar datos del servidor cada 30 segundos
     setInterval(cargarTiemposPorEstado, 30000);
 });
+
+async function cargarKPIs() {
+    try {
+        const r = await fetch('/api/dashboard/kpis');
+        const d = await r.json();
+        document.querySelector('#kpi-total .kpi-value').textContent    = d.total_registros;
+        document.querySelector('#kpi-gestionadas .kpi-value').textContent = d.pct_gestionadas + '%';
+        document.querySelector('#kpi-gestionadas .kpi-sub').textContent  = d.gestionadas + ' sobre ' + d.total_registros + ' registros';
+        document.querySelector('#kpi-cierre .kpi-value').textContent     = d.pct_cierre + '%';
+        document.querySelector('#kpi-cierre .kpi-sub').textContent       = d.cierre_exitoso + ' sobre ' + d.gestionadas + ' registros';
+        document.querySelector('#kpi-usabilidad .kpi-value').textContent = d.usabilidad + '%';
+        document.querySelector('#kpi-usabilidad .kpi-sub').textContent   = d.cierre_exitoso + ' sobre ' + d.total_registros + ' registros';
+    } catch(e) { console.error('Error KPIs:', e); }
+}
 
 function cargarGraficoRegistros() {
     fetch('/api/dashboard/registros-semana')

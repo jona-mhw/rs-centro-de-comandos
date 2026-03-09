@@ -11,6 +11,8 @@ class Perfil(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False, unique=True)
     color = db.Column(db.String(7), default='#2F7E81')
+    # RBAC #18: 1=ver+editar, 2=solo ver, 3=sin acceso
+    nivel_acceso = db.Column(db.Integer, default=1)
     activo = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -21,7 +23,8 @@ class Perfil(db.Model):
         return {
             'id': self.id,
             'nombre': self.nombre,
-            'color': self.color
+            'color': self.color,
+            'nivel_acceso': self.nivel_acceso
         }
 
 

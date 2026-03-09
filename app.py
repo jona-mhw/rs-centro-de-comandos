@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, session
 from models import db, Ubicacion, Cama, EstadoCama, HistorialCama, Perfil, Paciente
 from datetime import datetime, timedelta
 from sqlalchemy import func
+import io
+import qrcode
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///centro_comandos.db'
@@ -13,17 +15,21 @@ db.init_app(app)
 
 def init_datos_dummy():
     """Inicializa datos dummy para la demo"""
-    # Perfiles de usuario
+    # Perfiles de usuario — con nivel_acceso para RBAC (#18)
     perfiles = [
-        {'nombre': 'Staff de Limpieza', 'color': '#8AC52F'},
-        {'nombre': 'Enfermera', 'color': '#60B2B2'},
-        {'nombre': 'Movilizador', 'color': '#9C27B0'},
+        {'nombre': 'Administrador',     'color': '#2F7E81', 'nivel_acceso': 1},
+        {'nombre': 'Staff de Limpieza', 'color': '#8AC52F', 'nivel_acceso': 2},
+        {'nombre': 'Enfermera',         'color': '#60B2B2', 'nivel_acceso': 2},
+        {'nombre': 'Movilizador',       'color': '#9C27B0', 'nivel_acceso': 3},
     ]
 
     for perfil_data in perfiles:
-        if not Perfil.query.filter_by(nombre=perfil_data['nombre']).first():
+        existing = Perfil.query.filter_by(nombre=perfil_data['nombre']).first()
+        if not existing:
             perfil = Perfil(**perfil_data)
             db.session.add(perfil)
+        else:
+            existing.nivel_acceso = perfil_data['nivel_acceso']
 
     db.session.commit()
 
@@ -334,17 +340,12 @@ def cambiar_estado_cama(cama_id):
 
 
 @app.route('/ubicaciones')
-def ubicaciones():
-    """Mantenedor de ubicaciones"""
-    torres = Ubicacion.query.filter_by(tipo='torre', activo=True).all()
-    return render_template('ubicaciones.html', torres=torres)
-
-
 @app.route('/api/ubicacion', methods=['POST'])
 def crear_ubicacion():
-    """Crea una nueva ubicacion"""
+    """Crea una nueva ubicacion — requiere nivel 1"""
+    if _nivel_actual() > 1:
+        return jsonify({'error': 'Sin permiso. Se requiere Nivel 1 (Administrador).'}), 403
     data = request.get_json()
-
     ubicacion = Ubicacion(
         nombre=data['nombre'],
         tipo=data['tipo'],
@@ -353,19 +354,18 @@ def crear_ubicacion():
     )
     db.session.add(ubicacion)
     db.session.commit()
-
     return jsonify({'success': True, 'ubicacion': ubicacion.to_dict()})
 
 
 @app.route('/api/ubicacion/<int:ubicacion_id>', methods=['PUT'])
 def actualizar_ubicacion(ubicacion_id):
-    """Actualiza una ubicacion"""
+    """Actualiza una ubicacion — requiere nivel 1"""
+    if _nivel_actual() > 1:
+        return jsonify({'error': 'Sin permiso. Se requiere Nivel 1 (Administrador).'}), 403
     ubicacion = Ubicacion.query.get_or_404(ubicacion_id)
     data = request.get_json()
-
     ubicacion.nombre = data.get('nombre', ubicacion.nombre)
     ubicacion.camas_por_fila = data.get('camas_por_fila', ubicacion.camas_por_fila)
-
     db.session.commit()
     return jsonify({'success': True, 'ubicacion': ubicacion.to_dict()})
 
@@ -540,6 +540,142 @@ def crear_paciente():
     db.session.commit()
 
     return jsonify({'success': True, 'paciente': paciente.to_dict(), 'existente': False})
+
+
+# ─────────────────────────────────────────────────────────────────
+# #16 — Dashboard KPIs
+# ─────────────────────────────────────────────────────────────────
+@app.route('/api/dashboard/kpis')
+def dashboard_kpis():
+    """KPIs calculados desde el historial de movimientos de estados."""
+    total = HistorialCama.query.count()
+
+    estado_alta = EstadoCama.query.filter_by(nombre='Alta Medica').first()
+    estado_disp = EstadoCama.query.filter_by(nombre='Disponible').first()
+    estado_lib  = EstadoCama.query.filter_by(nombre='Proceso de Liberacion').first()
+
+    # Altas gestionadas = registros cuyo estado_nuevo es Alta Medica
+    gestionadas = HistorialCama.query.filter_by(
+        estado_nuevo_id=estado_alta.id if estado_alta else -1
+    ).count() if estado_alta else 0
+
+    # Cierre exitoso = camas que pasaron por Alta Medica Y luego llegaron a Disponible o Proceso de Liberacion
+    ids_cierre = set()
+    if estado_alta and (estado_disp or estado_lib):
+        ids_destino = [e.id for e in [estado_disp, estado_lib] if e]
+        altas = HistorialCama.query.filter_by(estado_nuevo_id=estado_alta.id).all()
+        for h in altas:
+            posterior = HistorialCama.query.filter(
+                HistorialCama.cama_id == h.cama_id,
+                HistorialCama.estado_nuevo_id.in_(ids_destino),
+                HistorialCama.created_at > h.created_at
+            ).first()
+            if posterior:
+                ids_cierre.add(h.cama_id)
+    cierre_exitoso = len(ids_cierre)
+
+    pct_gestionadas = round((gestionadas / total * 100) if total > 0 else 0, 1)
+    pct_cierre      = round((cierre_exitoso / gestionadas * 100) if gestionadas > 0 else 0, 1)
+    pct_usabilidad  = round((cierre_exitoso / total * 100) if total > 0 else 0, 1)
+
+    return jsonify({
+        'total_registros':   total,
+        'gestionadas':       gestionadas,
+        'pct_gestionadas':   pct_gestionadas,
+        'cierre_exitoso':    cierre_exitoso,
+        'pct_cierre':        pct_cierre,
+        'usabilidad':        pct_usabilidad,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────
+# #17 — QR: generar imagen y confirmar hito
+# ─────────────────────────────────────────────────────────────────
+QR_ACCIONES = {
+    'traslado': {
+        'label':        'Confirmar salida del paciente',
+        'descripcion':  'El personal de piso confirma que el paciente salió de la habitación.',
+        'estado_destino': 'Esperando Higiene',
+    },
+    'higiene': {
+        'label':        'Confirmar higiene realizada',
+        'descripcion':  'Supervisor Aramark confirma que se realizó la higiene.',
+        'estado_destino': 'Proceso de Liberacion',
+    },
+}
+
+@app.route('/qr/img/<int:cama_id>/<accion>')
+def qr_imagen(cama_id, accion):
+    """Genera y devuelve el QR como imagen PNG."""
+    if accion not in QR_ACCIONES:
+        return 'Acción inválida', 400
+    url = request.host_url.rstrip('/') + f'/qr/confirmar/{cama_id}/{accion}'
+    img = qrcode.make(url)
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png')
+
+
+@app.route('/qr/confirmar/<int:cama_id>/<accion>', methods=['GET', 'POST'])
+def qr_confirmar(cama_id, accion):
+    """Página mobile de confirmación de hito (GET) y acción (POST)."""
+    if accion not in QR_ACCIONES:
+        return 'Acción inválida', 400
+    cama = Cama.query.get_or_404(cama_id)
+    info = QR_ACCIONES[accion]
+
+    if request.method == 'POST':
+        estado_dest = EstadoCama.query.filter_by(nombre=info['estado_destino']).first()
+        if not estado_dest:
+            return render_template('qr_confirm.html', cama=cama, info=info, error='Estado destino no encontrado', accion=accion)
+        estado_anterior_id = cama.estado_id
+        cama.estado_id    = estado_dest.id
+        cama.estado_inicio = datetime.utcnow()
+        historial = HistorialCama(
+            cama_id            = cama.id,
+            estado_anterior_id = estado_anterior_id,
+            estado_nuevo_id    = estado_dest.id,
+            comentario         = f'Confirmado via QR: {info["label"]}',
+        )
+        db.session.add(historial)
+        db.session.commit()
+        return render_template('qr_confirm.html', cama=cama, info=info, success=True, accion=accion)
+
+    return render_template('qr_confirm.html', cama=cama, info=info, success=False, accion=accion)
+
+
+# ─────────────────────────────────────────────────────────────────
+# #18 — RBAC: sesión de perfil demo + protección de endpoints
+# ─────────────────────────────────────────────────────────────────
+def _nivel_actual():
+    """Retorna el nivel_acceso del perfil activo en sesión (1 por defecto)."""
+    perfil_id = session.get('perfil_id')
+    if perfil_id:
+        p = Perfil.query.get(perfil_id)
+        if p:
+            return p.nivel_acceso
+    return 1  # Administrador por defecto
+
+
+@app.route('/api/session/perfil', methods=['POST'])
+def set_perfil_sesion():
+    """Cambia el perfil activo en sesión (demo RBAC)."""
+    data = request.get_json()
+    perfil_id = data.get('perfil_id')
+    perfil = Perfil.query.get_or_404(perfil_id)
+    session['perfil_id'] = perfil.id
+    return jsonify({'ok': True, 'perfil': perfil.to_dict()})
+
+
+@app.route('/ubicaciones')
+def ubicaciones():
+    torres = Ubicacion.query.filter_by(tipo='torre', activo=True).all()
+    perfiles = Perfil.query.filter_by(activo=True).all()
+    nivel = _nivel_actual()
+    perfil_activo_id = session.get('perfil_id', perfiles[0].id if perfiles else None)
+    return render_template('ubicaciones.html', torres=torres, perfiles=perfiles,
+                           nivel_acceso=nivel, perfil_activo_id=perfil_activo_id)
 
 
 with app.app_context():

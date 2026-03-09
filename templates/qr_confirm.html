@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Confirmar Hito — RedSalud</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem 1.5rem;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+        .logo { font-size: 1.1rem; font-weight: 700; color: #2F7E81; margin-bottom: 1.5rem; }
+        .cama-badge {
+            display: inline-block;
+            background: #2F7E81;
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        h2 { font-size: 1.1rem; color: #2d3748; margin-bottom: 0.5rem; }
+        p.desc { font-size: 0.875rem; color: #718096; margin-bottom: 2rem; line-height: 1.5; }
+
+        .btn-confirm {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            background: #2F7E81;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-confirm:hover { background: #27696d; }
+
+        .success-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+        .success-title { font-size: 1.3rem; font-weight: 700; color: #4CAF50; margin-bottom: 0.5rem; }
+        .success-sub { font-size: 0.875rem; color: #718096; }
+        .error-msg { color: #F44336; font-size: 0.875rem; margin-top: 1rem; }
+
+        .estado-badge {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">🏥 RedSalud — Monitor de Camas</div>
+
+    {% if success %}
+        <div class="success-icon">✅</div>
+        <div class="success-title">¡Hito confirmado!</div>
+        <p class="success-sub">El estado de la cama fue actualizado correctamente.</p>
+        <div class="estado-badge">Nuevo estado: {{ info.estado_destino }}</div>
+    {% else %}
+        <div class="cama-badge">{{ cama.codigo }}</div>
+        <h2>{{ info.label }}</h2>
+        <p class="desc">{{ info.descripcion }}</p>
+
+        {% if error %}
+        <p class="error-msg">⚠️ {{ error }}</p>
+        {% endif %}
+
+        <form method="POST">
+            <button type="submit" class="btn-confirm">✅ Confirmar</button>
+        </form>
+    {% endif %}
+</div>
+</body>
+</html>

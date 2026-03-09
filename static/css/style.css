@@ -1486,3 +1486,65 @@ body {
     .main-content { margin-left: var(--sidebar-collapsed-width); }
     .main-content.sidebar-collapsed { margin-left: var(--sidebar-collapsed-width); }
 }
+
+/* ── KPI Cards (#16) ─────────────────────────────────────────── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    text-align: center;
+    border-top: 4px solid #e2e8f0;
+}
+.kpi-card.kpi-green  { border-top-color: #4CAF50; }
+.kpi-card.kpi-teal   { border-top-color: #2F7E81; }
+.kpi-card.kpi-purple { border-top-color: #9C27B0; }
+.kpi-icon  { font-size: 1.5rem; margin-bottom: 0.4rem; }
+.kpi-value { font-size: 2rem; font-weight: 700; color: #2d3748; line-height: 1; }
+.kpi-label { font-size: 0.78rem; color: #718096; margin-top: 0.3rem; }
+.kpi-sub   { font-size: 0.72rem; color: #a0aec0; margin-top: 0.2rem; }
+
+/* ── QR button (#17) ─────────────────────────────────────────── */
+.qr-btn {
+    position: absolute;
+    bottom: 4px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    background: rgba(0,0,0,0.55);
+    border: none;
+    border-radius: 3px;
+    font-size: 8px;
+    cursor: pointer;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    padding: 0;
+    line-height: 1;
+    transition: background 0.15s;
+}
+.qr-btn:hover { background: rgba(0,0,0,0.8); }
+
+/* ── RBAC selector (#18) ─────────────────────────────────────── */
+.rbac-selector {
+    display: flex;
+    align-items: center;
+    margin-right: 0.75rem;
+}
+.rbac-select {
+    padding: 0.35rem 0.6rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #2d3748;
+    background: white;
+    cursor: pointer;
+}
