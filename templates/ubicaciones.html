@@ -4,6 +4,18 @@
 {% block page_title %}Mantenedor de Ubicaciones{% endblock %}
 
 {% block header_actions %}
+<!-- Selector de perfil demo — RBAC (#18) -->
+<div class="rbac-selector">
+    <label for="perfil-select" style="font-size:0.8rem;color:#718096;margin-right:0.4rem;">Perfil:</label>
+    <select id="perfil-select" class="rbac-select" onchange="cambiarPerfil(this.value)">
+        {% for p in perfiles %}
+        <option value="{{ p.id }}" {% if p.id == perfil_activo_id %}selected{% endif %}>
+            {{ p.nombre }} (Nivel {{ p.nivel_acceso }})
+        </option>
+        {% endfor %}
+    </select>
+</div>
+{% if nivel_acceso <= 1 %}
 <button class="btn btn-primary" id="btn-nueva-torre">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -11,6 +23,7 @@
     </svg>
     Nueva Torre
 </button>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -24,6 +37,7 @@
                     <span class="tree-name">{{ torre.nombre }}</span>
                     <span class="tree-badge">{{ torre.hijos|selectattr('activo')|list|length }} pisos</span>
                 </div>
+                {% if nivel_acceso <= 1 %}
                 <div class="tree-actions">
                     <button class="btn-icon btn-edit" title="Editar">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -38,6 +52,7 @@
                         </svg>
                     </button>
                 </div>
+                {% endif %}
             </div>
             <div class="tree-children">
                 {% for piso in torre.hijos if piso.activo %}
@@ -177,5 +192,14 @@
     document.addEventListener('DOMContentLoaded', function() {
         initUbicaciones();
     });
+
+    async function cambiarPerfil(perfilId) {
+        await fetch('/api/session/perfil', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({perfil_id: parseInt(perfilId)})
+        });
+        window.location.reload();
+    }
 </script>
 {% endblock %}

@@ -149,12 +149,59 @@
 </div>
 {% endblock %}
 
+<!-- Modal QR (#17) -->
+<div class="modal" id="qr-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:340px;text-align:center;">
+        <div class="modal-header">
+            <h3 id="qr-modal-title">Confirmar vía QR</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="qr-modal-desc" style="font-size:0.875rem;color:#718096;margin-bottom:1rem;"></p>
+            <img id="qr-img" src="" alt="QR Code" style="width:200px;height:200px;border:1px solid #e2e8f0;border-radius:8px;">
+            <p style="font-size:0.75rem;color:#a0aec0;margin-top:0.75rem;">Escanea con el celular para confirmar</p>
+        </div>
+    </div>
+</div>
+
 {% block extra_js %}
 <script>
-    // Inicializar monitor de camas
     document.addEventListener('DOMContentLoaded', function() {
         initMonitor();
         loadStats();
+        initQRButtons();
     });
+
+    // ── QR buttons (#17) ────────────────────────────────────────
+    const QR_ESTADOS = {
+        'Esperando Traslado': { accion: 'traslado', label: 'Confirmar salida del paciente' },
+        'Esperando Higiene':  { accion: 'higiene',  label: 'Confirmar higiene realizada'   },
+    };
+
+    function initQRButtons() {
+        document.querySelectorAll('.hex-cell').forEach(cell => {
+            const estadoNombre = cell.getAttribute('title')?.split(' - ')[1] || '';
+            const qrInfo = QR_ESTADOS[estadoNombre];
+            if (!qrInfo) return;
+            const btn = document.createElement('button');
+            btn.className = 'qr-btn';
+            btn.title = qrInfo.label;
+            btn.innerHTML = '⬛';
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const camaId = cell.dataset.camaId;
+                openQRModal(camaId, qrInfo.accion, qrInfo.label);
+            });
+            cell.appendChild(btn);
+        });
+    }
+
+    function openQRModal(camaId, accion, label) {
+        document.getElementById('qr-modal-title').textContent = label;
+        document.getElementById('qr-modal-desc').textContent  = 'Cama #' + camaId;
+        document.getElementById('qr-img').src = '/qr/img/' + camaId + '/' + accion;
+        document.getElementById('qr-modal').classList.add('active');
+    }
 </script>
 {% endblock %}
