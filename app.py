@@ -27,21 +27,29 @@ def init_datos_dummy():
 
     db.session.commit()
 
-    # Estados de cama
+    # Estados de cama — paleta oficial RedSalud (issue #13)
+    # border_color != None → estilo borde (fill transparente + borde coloreado)
     estados = [
-        {'nombre': 'Disponible', 'color': '#4CAF50', 'descripcion': 'Cama lista para recibir paciente', 'orden': 1},
-        {'nombre': 'Ocupada', 'color': '#F44336', 'descripcion': 'Cama con paciente', 'orden': 2},
-        {'nombre': 'Esperando Transporte', 'color': '#9C27B0', 'descripcion': 'Esperando traslado de paciente', 'orden': 3},
-        {'nombre': 'Esperando Limpieza', 'color': '#FFC107', 'descripcion': 'Cama esperando ser limpiada', 'orden': 4},
-        {'nombre': 'En Limpieza', 'color': '#FF9800', 'descripcion': 'Cama en proceso de higienizacion', 'orden': 5},
-        {'nombre': 'Mantenimiento', 'color': '#9E9E9E', 'descripcion': 'Cama en mantenimiento', 'orden': 6},
-        {'nombre': 'Bloqueada', 'color': '#607D8B', 'descripcion': 'Cama no disponible', 'orden': 7},
+        {'nombre': 'Disponible',                'color': '#4CAF50', 'border_color': None,      'descripcion': 'Cama lista para recibir paciente',                     'orden': 1},
+        {'nombre': 'Ocupada',                   'color': '#F44336', 'border_color': None,      'descripcion': 'Cama con paciente',                                    'orden': 2},
+        {'nombre': 'Alta Medica',               'color': '#F44336', 'border_color': '#F44336', 'descripcion': 'Alta medica con fecha definida en sistema',            'orden': 3},
+        {'nombre': 'Esperando Traslado',        'color': '#9C27B0', 'border_color': None,      'descripcion': 'Esperando traslado de paciente',                       'orden': 4},
+        {'nombre': 'Esperando Higiene',         'color': '#FFC107', 'border_color': None,      'descripcion': 'Cama esperando ser higienizada',                       'orden': 5},
+        {'nombre': 'Higiene Realizado',         'color': '#FFC107', 'border_color': '#FFC107', 'descripcion': 'Cama disponible — higiene ya realizado',               'orden': 6},
+        {'nombre': 'Proceso de Liberacion',     'color': '#4CAF50', 'border_color': '#4CAF50', 'descripcion': 'Cama en proceso de liberacion en sistema',             'orden': 7},
+        {'nombre': 'Bloqueada',                 'color': '#9E9E9E', 'border_color': None,      'descripcion': 'Cama no disponible',                                   'orden': 8},
     ]
 
     for estado_data in estados:
-        if not EstadoCama.query.filter_by(nombre=estado_data['nombre']).first():
+        existing = EstadoCama.query.filter_by(nombre=estado_data['nombre']).first()
+        if not existing:
             estado = EstadoCama(**estado_data)
             db.session.add(estado)
+        else:
+            # Actualizar colores si ya existe
+            existing.color = estado_data['color']
+            existing.border_color = estado_data['border_color']
+            existing.orden = estado_data['orden']
 
     db.session.commit()
 
@@ -411,6 +419,7 @@ def estadisticas():
         stats[estado.nombre] = {
             'count': count,
             'color': estado.color,
+            'border_color': estado.border_color,
             'orden': estado.orden,
             'porcentaje': round((count / total_camas * 100) if total_camas > 0 else 0, 1)
         }
